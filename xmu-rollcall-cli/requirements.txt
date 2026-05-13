@@ -1,0 +1,6 @@
+requests>=2.31.0
+pycryptodome>=3.19.0
+xmulogin>=1.0.0
+click>=8.1.0
+aiohttp>=3.9.0
+
