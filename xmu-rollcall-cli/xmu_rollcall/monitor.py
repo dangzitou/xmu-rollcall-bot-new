@@ -128,20 +128,20 @@ _COLOR_PALETTE = (
 )
 _COLOR_COUNT = len(_COLOR_PALETTE)
 
-def get_colorful_text(text, color_offset=0):
+def get_colorful_text(text: str, color_offset: int = 0) -> str:
     """为文本的每个字符应用不同的颜色"""
     return ''.join(
         _COLOR_PALETTE[(i + color_offset) % _COLOR_COUNT] + char
         for i, char in enumerate(text)
     ) + Colors.ENDC
 
-def print_footer_text(color_offset=0):
+def print_footer_text(color_offset: int = 0) -> None:
     """打印底部彩色文字"""
     text = "XMU-Rollcall-Bot @ KrsMt"
     colored = get_colorful_text(text, color_offset)
     print(center_text(colored))
 
-def print_dashboard(name, start_time, query_count, banner_frame=0, show_banner=True):
+def print_dashboard(name: str, start_time: float, query_count: int, banner_frame: int = 0, show_banner: bool = True) -> None:
     """打印主仪表板"""
     clear_screen()
     print_banner()
@@ -177,7 +177,7 @@ def print_dashboard(name, start_time, query_count, banner_frame=0, show_banner=T
         print()
         print_footer_text(banner_frame)
 
-def print_login_status(message, is_success=True):
+def print_login_status(message: str, is_success: bool = True) -> None:
     """打印登录状态"""
     if is_success:
         print(f"{Colors.OKGREEN}[SUCCESS]{Colors.ENDC} {message}")
@@ -192,14 +192,14 @@ DAYTIME_HEARTBEAT_INTERVAL = 300
 NIGHTTIME_HEARTBEAT_INTERVAL = 3600
 
 
-def get_heartbeat_interval_for_hour_minute(hour, minute):
+def get_heartbeat_interval_for_hour_minute(hour: int, minute: int) -> int:
     """根据时段返回心跳间隔（秒）。白天 07:00-18:29 为 5 分钟，其余为 1 小时。"""
     if (hour > 7 or (hour == 7 and minute >= 0)) and (hour < 18 or (hour == 18 and minute < 30)):
         return DAYTIME_HEARTBEAT_INTERVAL
     return NIGHTTIME_HEARTBEAT_INTERVAL
 
 
-def log_heartbeat(local_time, running_time, query_count):
+def log_heartbeat(local_time: str, running_time: str, query_count: int) -> None:
     """在非交互模式下输出周期性心跳日志。"""
     if INTERACTIVE_TTY:
         return
@@ -209,7 +209,7 @@ def log_heartbeat(local_time, running_time, query_count):
         flush=True,
     )
 
-def update_status_line(line_num, label, value, color):
+def update_status_line(line_num: int, label: str, value: str, color: str) -> None:
     """更新指定行的状态信息，不清屏"""
     if not INTERACTIVE_TTY:
         return
@@ -222,7 +222,7 @@ def update_status_line(line_num, label, value, color):
     sys.stdout.write("\033[?25h")
     sys.stdout.flush()
 
-def update_footer_text():
+def update_footer_text() -> None:
     """更新底部彩色文字，不清屏"""
     if not INTERACTIVE_TTY:
         return
@@ -243,7 +243,7 @@ def update_footer_text():
     sys.stdout.write("\033[?25h")
     sys.stdout.flush()
 
-def start_monitor(account):
+def start_monitor(account: dict) -> None:
     """启动监控程序"""
     USERNAME = account['username']
     PASSWORD = account['password']

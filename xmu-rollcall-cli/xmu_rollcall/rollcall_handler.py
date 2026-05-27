@@ -21,7 +21,7 @@ def _fetch_signed_count(session, rollcall_id):
         pass
     return None
 
-def wait_for_classmates(session, rollcall_id, settings):
+def wait_for_classmates(session, rollcall_id: int, settings: dict) -> None:
     """根据配置等待足够多的同学签到后再签。"""
     mode = settings.get("wait_before_answer_mode", "none")
     if mode == "none":
@@ -49,7 +49,7 @@ def wait_for_classmates(session, rollcall_id, settings):
                 return
         time.sleep(WAIT_POLL_INTERVAL)
 
-def process_rollcalls(data, session, account=None):
+def process_rollcalls(data: dict, session, account: dict | None = None) -> dict:
     """处理签到数据"""
     data_empty = {'rollcalls': []}
     result = handle_rollcalls(data, session, account)
@@ -58,7 +58,7 @@ def process_rollcalls(data, session, account=None):
     else:
         return data
 
-def extract_rollcalls(data):
+def extract_rollcalls(data: dict) -> tuple[int, list[dict]]:
     """提取签到信息"""
     rollcalls = data['rollcalls']
     result = []
@@ -81,7 +81,7 @@ def extract_rollcalls(data):
         rollcall_count = 0
     return rollcall_count, result
 
-def wait_before_number_answer(settings):
+def wait_before_number_answer(settings: dict) -> None:
     delay_min = settings["number_delay_min"]
     delay_max = settings["number_delay_max"]
     delay = random.randint(delay_min, delay_max) if delay_max > delay_min else delay_min
@@ -95,7 +95,7 @@ def wait_before_number_answer(settings):
         time.sleep(1)
     print()
 
-def wait_before_radar_answer(settings):
+def wait_before_radar_answer(settings: dict) -> None:
     delay_min = settings.get("radar_delay_min", 0)
     delay_max = settings.get("radar_delay_max", 0)
     delay = random.randint(delay_min, delay_max) if delay_max > delay_min else delay_min
@@ -109,14 +109,14 @@ def wait_before_radar_answer(settings):
         time.sleep(1)
     print()
 
-def confirm_before_answer(settings):
+def confirm_before_answer(settings: dict) -> bool:
     if not settings["manual_confirm"]:
         return True
 
     answer = input("Answer this rollcall now? [y/N]: ").strip().lower()
     return answer == "y"
 
-def handle_rollcalls(data, session, account=None):
+def handle_rollcalls(data: dict, session, account: dict | None = None) -> list[bool]:
     """处理签到流程"""
     count, rollcalls = extract_rollcalls(data)
     answer_status = [False for _ in range(count)]

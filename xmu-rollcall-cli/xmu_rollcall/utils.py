@@ -4,7 +4,7 @@ import requests
 
 import time as _time
 
-def retry_request(fn, max_attempts=3, delay=2, backoff=2, label="request"):
+def retry_request(fn, max_attempts: int = 3, delay: float = 2, backoff: float = 2, label: str = "request"):
     """Retry a callable with exponential backoff.
 
     Args:
@@ -52,7 +52,7 @@ headers = {
     "Referer": "https://ids.xmu.edu.cn/authserver/login",
 }
 
-def clear_screen():
+def clear_screen() -> None:
     """清屏"""
     if not supports_interactive_terminal():
         return
@@ -61,7 +61,7 @@ def clear_screen():
     else:
         os.system('clear')
 
-def save_session(sess: requests.Session, path: str):
+def save_session(sess: requests.Session, path: str) -> None:
     """保存session到文件"""
     try:
         cj_dict = requests.utils.dict_from_cookiejar(sess.cookies)
@@ -70,7 +70,7 @@ def save_session(sess: requests.Session, path: str):
     except Exception:
         pass
 
-def load_session(sess: requests.Session, path: str):
+def load_session(sess: requests.Session, path: str) -> bool:
     """从文件加载session"""
     try:
         with open(path, "r", encoding="utf-8") as f:

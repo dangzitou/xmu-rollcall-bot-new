@@ -4,7 +4,7 @@ import math
 import requests
 from .utils import retry_request, base_url, headers
 
-def find_number_code(data, depth=0, max_depth=10):
+def find_number_code(data, depth: int = 0, max_depth: int = 10) -> str | None:
     """Extract number_code from nested dict/list API responses.
 
     Args:
@@ -32,7 +32,7 @@ def find_number_code(data, depth=0, max_depth=10):
                 return nested_code
     return None
 
-def send_code(in_session, rollcall_id):
+def send_code(in_session, rollcall_id: int) -> bool:
     code_url = f"{base_url}/api/rollcall/{rollcall_id}/student_rollcalls"
     answer_url = f"{base_url}/api/rollcall/{rollcall_id}/answer_number_rollcall"
     print("Trying number code from API...")
@@ -86,7 +86,7 @@ def send_code(in_session, rollcall_id):
         print(f"Failed to submit number code: {e}\nTime: {t01 - t00:.2f} s.")
         return False
 
-def send_radar(in_session, rollcall_id):
+def send_radar(in_session, rollcall_id: int) -> bool:
     url = f"{base_url}/api/rollcall/{rollcall_id}/answer"
 
     lat_1, lat_2 = 24.3, 24.6

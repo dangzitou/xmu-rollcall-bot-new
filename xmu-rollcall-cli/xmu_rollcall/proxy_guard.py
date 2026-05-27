@@ -1,7 +1,7 @@
 """Utilities for disabling inherited proxy settings."""
 
 
-def disable_system_proxies():
+def disable_system_proxies() -> None:
     """Force requests sessions to ignore OS-level proxy settings."""
     import requests.sessions
 

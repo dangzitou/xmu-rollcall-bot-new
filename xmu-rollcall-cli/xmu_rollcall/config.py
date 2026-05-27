@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .notifications_config import default_notifications_config, normalize_notifications_config
 
-def get_config_dir():
+def get_config_dir() -> Path:
     """
     获取配置目录路径，支持沙盒环境（如 a-Shell）
     优先级：
@@ -62,7 +62,7 @@ DEFAULT_ACCOUNT = {
 
 DEFAULT_ROLLCALL_SETTINGS = DEFAULT_ACCOUNT["rollcall_settings"].copy()
 
-def normalize_rollcall_settings(settings):
+def normalize_rollcall_settings(settings: dict | None) -> dict:
     """Normalize rollcall settings and fill defaults."""
     merged = DEFAULT_ROLLCALL_SETTINGS.copy()
     merged.update(settings or {})
@@ -97,14 +97,14 @@ def normalize_rollcall_settings(settings):
     merged["manual_confirm"] = bool(merged.get("manual_confirm", False))
     return merged
 
-def ensure_config_dir():
+def ensure_config_dir() -> None:
     """确保配置目录存在"""
     try:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     except (OSError, PermissionError) as e:
         raise RuntimeError(f"无法创建配置目录 {CONFIG_DIR}: {e}\n提示：可以设置环境变量 XMU_ROLLCALL_CONFIG_DIR 指定配置目录位置")
 
-def load_config():
+def load_config() -> dict:
     """加载配置文件"""
     ensure_config_dir()
     if CONFIG_FILE.exists():
@@ -143,20 +143,20 @@ def load_config():
             raise RuntimeError(f"Failed to load config file {CONFIG_FILE}: {e}")
     return DEFAULT_CONFIG.copy()
 
-def save_config(config):
+def save_config(config: dict) -> None:
     """保存配置文件"""
     ensure_config_dir()
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
-def get_next_account_id(config):
+def get_next_account_id(config: dict) -> int:
     """获取下一个可用的账号ID"""
     accounts = config.get("accounts", [])
     if not accounts:
         return 1
     return max(acc.get("id", 0) for acc in accounts) + 1
 
-def add_account(config, username, password, name):
+def add_account(config: dict, username: str, password: str, name: str) -> int:
     """添加新账号"""
     account_id = get_next_account_id(config)
     new_account = {
@@ -175,48 +175,48 @@ def add_account(config, username, password, name):
         config["current_account_id"] = account_id
     return account_id
 
-def get_account_by_id(config, account_id):
+def get_account_by_id(config: dict, account_id: int) -> dict | None:
     """通过ID获取账号"""
     for acc in config.get("accounts", []):
         if acc.get("id") == account_id:
             return acc
     return None
 
-def get_current_account(config):
+def get_current_account(config: dict) -> dict | None:
     """获取当前选中的账号"""
     current_id = config.get("current_account_id")
     if current_id is None:
         return None
     return get_account_by_id(config, current_id)
 
-def set_current_account(config, account_id):
+def set_current_account(config: dict, account_id: int) -> None:
     """设置当前账号"""
     config["current_account_id"] = account_id
 
-def get_rollcall_settings(account):
+def get_rollcall_settings(account: dict) -> dict:
     """Return rollcall settings with defaults filled in."""
     return normalize_rollcall_settings(account.get("rollcall_settings") or {})
 
-def set_rollcall_settings(account, settings):
+def set_rollcall_settings(account: dict, settings: dict) -> None:
     """Persist normalized rollcall settings on an account."""
     account["rollcall_settings"] = normalize_rollcall_settings(settings or {})
 
 
-def get_notification_settings(account):
+def get_notification_settings(account: dict) -> dict:
     """Return notification settings with defaults filled in."""
     return normalize_notifications_config(account.get("notifications") or {})
 
 
-def set_notification_settings(account, settings):
+def set_notification_settings(account: dict, settings: dict) -> None:
     """Persist normalized notification settings on an account."""
     account["notifications"] = normalize_notifications_config(settings or {})
 
 
-def get_all_accounts(config):
+def get_all_accounts(config: dict) -> list[dict]:
     """获取所有账号"""
     return config.get("accounts", [])
 
-def is_config_complete(config):
+def is_config_complete(config: dict) -> bool:
     """检查配置是否完整（至少有一个账号且已选择当前账号）"""
     current_account = get_current_account(config)
     if current_account is None:
@@ -224,7 +224,7 @@ def is_config_complete(config):
     required_fields = ["username", "password"]
     return all(current_account.get(field) for field in required_fields)
 
-def get_cookies_path(account_id=None):
+def get_cookies_path(account_id: int | None = None) -> str:
     """获取cookies文件路径，根据账号ID命名"""
     ensure_config_dir()
     if account_id is None:
@@ -232,7 +232,7 @@ def get_cookies_path(account_id=None):
         account_id = config.get("current_account_id", 1)
     return str(CONFIG_DIR / f"{account_id}.json")
 
-def delete_account(config, account_id):
+def delete_account(config: dict, account_id: int) -> tuple[bool, list[str], dict[str, str]]:
     """
     删除账号并重新编号
     返回: (成功删除, 被删除账号的旧cookies路径列表, 需要重命名的cookies映射)
@@ -289,7 +289,7 @@ def delete_account(config, account_id):
 
     return True, cookies_to_delete, cookies_to_rename
 
-def perform_account_deletion(cookies_to_delete, cookies_to_rename):
+def perform_account_deletion(cookies_to_delete: str, cookies_to_rename: dict[str, str]) -> None:
     """执行cookies文件的删除和重命名操作"""
     import os
 
