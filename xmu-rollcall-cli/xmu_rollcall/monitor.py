@@ -25,8 +25,12 @@ YELLOW_TEXT = f"{Colors.WARNING}"
 END = Colors.ENDC
 INTERACTIVE_TTY = supports_interactive_terminal()
 
-def get_terminal_width():
-    """获取终端宽度"""
+def get_terminal_width() -> int:
+    """获取终端宽度。
+
+    Returns:
+        终端列数，获取失败时返回默认值 80。
+    """
     try:
         return shutil.get_terminal_size().columns
     except Exception:
@@ -34,12 +38,27 @@ def get_terminal_width():
 
 _ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-def strip_ansi(text):
-    """移除ANSI颜色代码以计算实际文本长度"""
+def strip_ansi(text: str) -> str:
+    """移除 ANSI 转义序列以计算实际显示文本长度。
+
+    Args:
+        text: 可能包含 ANSI 颜色代码的字符串。
+
+    Returns:
+        去除所有 ANSI 转义序列后的纯文本。
+    """
     return _ANSI_ESCAPE.sub('', text)
 
-def center_text(text, width=None):
-    """居中文本"""
+def center_text(text: str, width: int | None = None) -> str:
+    """将文本居中对齐到指定宽度。
+
+    Args:
+        text: 待居中的文本（可包含 ANSI 颜色代码）。
+        width: 目标宽度，默认为终端宽度。
+
+    Returns:
+        左侧填充空格后的居中文本。
+    """
     if width is None:
         width = get_terminal_width()
     text_len = len(strip_ansi(text))
@@ -48,8 +67,8 @@ def center_text(text, width=None):
     left_padding = (width - text_len) // 2
     return ' ' * left_padding + text
 
-def print_banner():
-    """打印美化的横幅"""
+def print_banner() -> None:
+    """在终端打印程序启动横幅，包含版本号信息。"""
     width = get_terminal_width()
     line = '=' * width
 
@@ -67,8 +86,12 @@ def print_banner():
         print(center_text(title2))
         print(line)
 
-def print_separator(char="-"):
-    """打印分隔线"""
+def print_separator(char: str = "-") -> None:
+    """打印指定字符组成的分隔线。
+
+    Args:
+        char: 用于组成分隔线的字符，默认为 '-'。
+    """
     width = get_terminal_width()
     line = char * width
     if INTERACTIVE_TTY:
@@ -76,8 +99,15 @@ def print_separator(char="-"):
     else:
         print(line)
 
-def format_time(seconds):
-    """格式化时间显示"""
+def format_time(seconds: int | float) -> str:
+    """将秒数格式化为人类可读的时间字符串。
+
+    Args:
+        seconds: 待格式化的秒数。
+
+    Returns:
+        格式化后的时间字符串，如 '1h 23m 45s' 或 '5m 30s'。
+    """
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
@@ -273,6 +303,7 @@ def start_monitor(account):
 
     # 主循环
     temp_data = {'rollcalls': []}
+    notified_rollcall_ids: set = set()  # tracks (rollcall_id, status) tuples
     query_count = 0
     start_time = time.time()
 
@@ -323,6 +354,19 @@ def start_monitor(account):
                     if temp_data != data:
                         temp_data = data
                         if len(temp_data['rollcalls']) > 0:
+                            # Filter out already-notified rollcalls (same id + status)
+                            new_rollcalls = [
+                                rc for rc in temp_data['rollcalls']
+                                if (rc.get('rollcall_id'), rc.get('status')) not in notified_rollcall_ids
+                            ]
+                            if not new_rollcalls:
+                                # All rollcalls already notified, skip
+                                continue
+                            # Mark as notified before processing (in case processing fails)
+                            for rc in new_rollcalls:
+                                notified_rollcall_ids.add((rc.get('rollcall_id'), rc.get('status')))
+                            # Replace with only new rollcalls for processing
+                            temp_data = {'rollcalls': new_rollcalls}
                             clear_screen()
                             width = get_terminal_width()
                             print(f"\n{Colors.WARNING}{Colors.BOLD}{'!' * width}{Colors.ENDC}")
