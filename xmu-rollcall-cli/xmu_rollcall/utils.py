@@ -33,6 +33,38 @@ def retry_request(fn, max_attempts: int = 3, delay: float = 2, backoff: float = 
 
 
 
+def format_duration(seconds: float) -> str:
+    """Format a duration in seconds into a human-readable Chinese string.
+
+    Examples::
+
+        format_duration(90)   → "1分30秒"
+        format_duration(3661) → "1小时1分1秒"
+        format_duration(45)   → "45秒"
+
+    Args:
+        seconds: Duration in seconds (non-negative).
+
+    Returns:
+        A human-readable string with appropriate units.
+    """
+    if seconds < 0:
+        seconds = 0
+    seconds = int(seconds)
+    if seconds < 60:
+        return f"{seconds}秒"
+    minutes, secs = divmod(seconds, 60)
+    if minutes < 60:
+        return f"{minutes}分{secs}秒" if secs else f"{minutes}分"
+    hours, minutes = divmod(minutes, 60)
+    parts = [f"{hours}小时"]
+    if minutes:
+        parts.append(f"{minutes}分")
+    if secs:
+        parts.append(f"{secs}秒")
+    return "".join(parts)
+
+
 def supports_interactive_terminal() -> bool:
     """Return True when stdout/stderr are attached to a real terminal."""
     try:

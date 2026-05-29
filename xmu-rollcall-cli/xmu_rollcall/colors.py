@@ -1,7 +1,13 @@
-"""Shared ANSI color constants for terminal output."""
+"""Shared ANSI color constants and helper utilities for terminal output."""
+
+import re
+
+_ANSI_RE = re.compile(r'\033\[[0-9;]*m')
 
 
 class Colors:
+    """ANSI escape code constants for colorful terminal output."""
+
     __slots__ = ()
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -17,3 +23,37 @@ class Colors:
     BG_BLUE = '\033[44m'
     BG_GREEN = '\033[42m'
     BG_CYAN = '\033[46m'
+
+
+def colored(text: str, *attrs: str) -> str:
+    """Wrap *text* with one or more ANSI attributes.
+
+    Usage::
+
+        colored("hello", Colors.OKGREEN, Colors.BOLD)
+        # → green bold "hello" + reset
+
+    Args:
+        text: The string to decorate.
+        *attrs: One or more ANSI escape codes (e.g. ``Colors.FAIL``).
+
+    Returns:
+        The decorated string with a trailing reset code.
+    """
+    prefix = ''.join(attrs)
+    return f"{prefix}{text}{Colors.ENDC}" if prefix else text
+
+
+def strip_ansi(text: str) -> str:
+    """Remove all ANSI escape sequences from *text*.
+
+    Useful when you need plain-text length or want to log without
+    garbled escape codes.
+
+    Args:
+        text: A string that may contain ANSI escapes.
+
+    Returns:
+        The cleaned string with no ANSI sequences.
+    """
+    return _ANSI_RE.sub('', text)
