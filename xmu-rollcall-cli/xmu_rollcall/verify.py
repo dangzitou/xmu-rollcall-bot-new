@@ -125,6 +125,11 @@ def send_radar(in_session, rollcall_id: int) -> bool:
     distance_1 = data_1.get("distance")
     distance_2 = data_2.get("distance")
 
+    if distance_1 is None or distance_2 is None:
+        print(f"Radar sign-in failed: server did not return distance info. "
+              f"distance_1={distance_1}, distance_2={distance_2}")
+        return False
+
     def latlon_to_xy(lat, lon, lat0, lon0):
         R = 6371000
         x = math.radians(lon - lon0) * R * math.cos(math.radians(lat0))
