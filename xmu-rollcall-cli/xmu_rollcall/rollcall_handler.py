@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import time
 import random
+
+import requests
+
 from .config import get_rollcall_settings
 from .verify import send_code, send_radar
 from .events import notify_new_rollcall
 
 WAIT_POLL_INTERVAL = 3
 
-def _fetch_signed_count(session, rollcall_id):
+def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | None:
     """查询当前签到已签人数。"""
     try:
         from .verify import base_url
@@ -49,7 +54,7 @@ def wait_for_classmates(session, rollcall_id: int, settings: dict) -> None:
                 return
         time.sleep(WAIT_POLL_INTERVAL)
 
-def process_rollcalls(data: dict, session, account: dict | None = None) -> dict:
+def process_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> dict:
     """处理签到数据"""
     data_empty = {'rollcalls': []}
     result = handle_rollcalls(data, session, account)
@@ -116,7 +121,7 @@ def confirm_before_answer(settings: dict) -> bool:
     answer = input("Answer this rollcall now? [y/N]: ").strip().lower()
     return answer == "y"
 
-def handle_rollcalls(data: dict, session, account: dict | None = None) -> list[bool]:
+def handle_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> list[bool]:
     """处理签到流程"""
     count, rollcalls = extract_rollcalls(data)
     answer_status = [False for _ in range(count)]
@@ -143,7 +148,7 @@ def handle_rollcalls(data: dict, session, account: dict | None = None) -> list[b
                 except Exception as e:
                     print(f"Notification error: {e}")
 
-            if (rollcalls[i]['status'] == 'absent') & (rollcalls[i]['is_number']) & (not rollcalls[i]['is_radar']):
+            if (rollcalls[i]['status'] == 'absent') and rollcalls[i]['is_number'] and not rollcalls[i]['is_radar']:
                 wait_before_number_answer(settings)
                 wait_for_classmates(session, rollcalls[i]['rollcall_id'], settings)
                 if send_code(session, rollcalls[i]['rollcall_id']):
