@@ -8,6 +8,7 @@ DEFAULT_NOTIFICATION_TARGET_ENV = "XMU_ROLLCALL_NOTIFY_TARGET"
 
 
 def default_notifications_config() -> dict:
+    """Return the default notification configuration dict."""
     return {
         "enabled": False,
         "target": {
@@ -19,6 +20,7 @@ def default_notifications_config() -> dict:
 
 
 def normalize_notifications_config(config: dict | None) -> dict:
+    """Merge user-supplied notification config with defaults and return normalized result."""
     merged = default_notifications_config()
     target = (config or {}).get("target") or {}
     merged.update({
@@ -33,6 +35,7 @@ def normalize_notifications_config(config: dict | None) -> dict:
 
 
 def get_notification_target(notifications_config: dict | None) -> NotificationTarget:
+    """Resolve the effective notification target from config."""
     config = normalize_notifications_config(notifications_config)
     target = config["target"]
     if target["type"] == "fixed":

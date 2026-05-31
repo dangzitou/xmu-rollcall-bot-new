@@ -87,6 +87,7 @@ def extract_rollcalls(data: dict) -> tuple[int, list[dict]]:
     return rollcall_count, result
 
 def wait_before_number_answer(settings: dict) -> None:
+    """Sleep for a random delay before answering a number rollcall."""
     delay_min = settings["number_delay_min"]
     delay_max = settings["number_delay_max"]
     delay = random.randint(delay_min, delay_max) if delay_max > delay_min else delay_min
@@ -101,6 +102,7 @@ def wait_before_number_answer(settings: dict) -> None:
     print()
 
 def wait_before_radar_answer(settings: dict) -> None:
+    """Sleep for a random delay before answering a radar rollcall."""
     delay_min = settings.get("radar_delay_min", 0)
     delay_max = settings.get("radar_delay_max", 0)
     delay = random.randint(delay_min, delay_max) if delay_max > delay_min else delay_min
@@ -115,6 +117,7 @@ def wait_before_radar_answer(settings: dict) -> None:
     print()
 
 def confirm_before_answer(settings: dict) -> bool:
+    """Prompt the user for confirmation before answering, if manual mode is on."""
     if not settings["manual_confirm"]:
         return True
 
