@@ -20,6 +20,19 @@ class NotificationError(RuntimeError):
 
 
 def notify_new_rollcall(account: dict, rollcall: dict) -> bool:
+    """Send a notification for a newly detected rollcall.
+
+    Checks whether notifications are enabled for the *account*, resolves the
+    delivery target, builds a :class:`NotificationMessage`, and dispatches it
+    via :func:`run_notification_command`.
+
+    Args:
+        account: Account configuration dict (must include ``notifications``).
+        rollcall: Raw rollcall data dict from the API.
+
+    Returns:
+        ``True`` if the notification was dispatched, ``False`` if skipped.
+    """
     notifications = normalize_notifications_config(account.get("notifications"))
     if not notifications.get("enabled") or not notifications.get("notify_on_new_rollcall"):
         return False
@@ -44,6 +57,15 @@ def notify_new_rollcall(account: dict, rollcall: dict) -> bool:
 
 
 def run_notification_command(payload: dict) -> None:
+    """Invoke the external notification helper script.
+
+    Args:
+        payload: JSON-serialisable dict with ``target`` and ``message`` keys.
+
+    Raises:
+        NotificationError: If the helper script is missing or exits with a
+            non-zero return code.
+    """
     if not SEND_HELPER.exists():
         raise NotificationError(f"Notification helper script not found: {SEND_HELPER}")
 
