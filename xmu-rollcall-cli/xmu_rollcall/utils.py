@@ -1,10 +1,15 @@
+"""Utility helpers: HTTP retries, session persistence, and terminal helpers."""
+
 import os
 import json
-import requests
+from typing import Any, Callable, TypeVar
 
+import requests
 import time as _time
 
-def retry_request(fn, max_attempts: int = 3, delay: float = 2, backoff: float = 2, label: str = "request"):
+T = TypeVar("T")
+
+def retry_request(fn: Callable[[], T], max_attempts: int = 3, delay: float = 2, backoff: float = 2, label: str = "request") -> T:
     """Retry a callable with exponential backoff.
 
     Args:
@@ -72,8 +77,10 @@ def supports_interactive_terminal() -> bool:
     except Exception:
         return False
 
-base_url = "https://lnt.xmu.edu.cn"
-headers = {
+BASE_URL: str = "https://lnt.xmu.edu.cn"
+"""XMU campus life-service base URL."""
+
+HEADERS: dict[str, str] = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -83,9 +90,14 @@ headers = {
     "Accept-Language": "zh-CN,zh;q=0.9",
     "Referer": "https://ids.xmu.edu.cn/authserver/login",
 }
+"""Default HTTP headers mimicking a desktop browser."""
 
 def clear_screen() -> None:
-    """清屏"""
+    """Clear the terminal screen.
+
+    No-op when stdout is not attached to an interactive terminal.
+    Uses ``cls`` on Windows and ``clear`` on POSIX systems.
+    """
     if not supports_interactive_terminal():
         return
     if os.name == 'nt':
@@ -94,7 +106,12 @@ def clear_screen() -> None:
         os.system('clear')
 
 def save_session(sess: requests.Session, path: str) -> None:
-    """保存session到文件"""
+    """Persist a session's cookies to a JSON file.
+
+    Args:
+        sess: The :class:`requests.Session` whose cookies to save.
+        path: Destination file path (will be overwritten).
+    """
     try:
         cj_dict = requests.utils.dict_from_cookiejar(sess.cookies)
         with open(path, "w", encoding="utf-8") as f:
@@ -103,7 +120,15 @@ def save_session(sess: requests.Session, path: str) -> None:
         pass
 
 def load_session(sess: requests.Session, path: str) -> bool:
-    """从文件加载session"""
+    """Restore a session's cookies from a previously saved JSON file.
+
+    Args:
+        sess: The :class:`requests.Session` to restore cookies into.
+        path: Path to the JSON cookie file.
+
+    Returns:
+        ``True`` on success, ``False`` if the file is missing or corrupt.
+    """
     try:
         with open(path, "r", encoding="utf-8") as f:
             cj_dict = json.load(f)
@@ -112,10 +137,20 @@ def load_session(sess: requests.Session, path: str) -> bool:
     except Exception:
         return False
 
-def verify_session(sess: requests.Session) -> dict:
-    """验证session是否有效"""
+def verify_session(sess: requests.Session) -> dict[str, Any]:
+    """Check whether a session is still authenticated.
+
+    Makes a GET request to ``/api/profile`` and returns the parsed JSON
+    if it contains a ``name`` key.
+
+    Args:
+        sess: An authenticated :class:`requests.Session`.
+
+    Returns:
+        The profile dict on success, or an empty dict on failure.
+    """
     try:
-        resp = sess.get(f"{base_url}/api/profile", headers=headers, timeout=15)
+        resp = sess.get(f"{BASE_URL}/api/profile", headers=HEADERS, timeout=15)
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, dict) and "name" in data:
@@ -123,4 +158,9 @@ def verify_session(sess: requests.Session) -> dict:
     except Exception:
         pass
     return {}
+
+
+# Backward-compatible aliases (deprecated — use UPPER_CASE versions)
+base_url = BASE_URL
+headers = HEADERS
 
