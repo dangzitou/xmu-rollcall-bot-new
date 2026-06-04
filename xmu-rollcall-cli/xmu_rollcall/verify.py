@@ -37,6 +37,15 @@ def find_number_code(data: Any, depth: int = 0, max_depth: int = 10) -> str | No
     return None
 
 def send_code(in_session: requests.Session, rollcall_id: int) -> bool:
+    """Answer a number-code rollcall by fetching the code from the API.
+
+    Args:
+        in_session: Authenticated requests session with valid cookies.
+        rollcall_id: The rollcall event ID to answer.
+
+    Returns:
+        True if the rollcall was answered successfully, False otherwise.
+    """
     code_url = f"{base_url}/api/rollcall/{rollcall_id}/student_rollcalls"
     answer_url = f"{base_url}/api/rollcall/{rollcall_id}/answer_number_rollcall"
     print("Trying number code from API...")
@@ -91,12 +100,26 @@ def send_code(in_session: requests.Session, rollcall_id: int) -> bool:
         return False
 
 def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
+    """Answer a radar (location-based) rollcall using trilateration.
+
+    Attempts two probe locations first; if neither is within range,
+    uses the reported distances to trilaterate the actual sign-in
+    location and retries with the computed coordinates.
+
+    Args:
+        in_session: Authenticated requests session with valid cookies.
+        rollcall_id: The rollcall event ID to answer.
+
+    Returns:
+        True if the rollcall was answered successfully, False otherwise.
+    """
     url = f"{base_url}/api/rollcall/{rollcall_id}/answer"
 
     lat_1, lat_2 = 24.3, 24.6
     lon_1, lon_2 = 118.0, 118.2
 
-    def payload(lat, lon):
+    def payload(lat: float, lon: float) -> dict:
+        """Build a radar answer payload for the given coordinates."""
         return {
             "accuracy": 35,
             "altitude": 0,
@@ -134,19 +157,22 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
               f"distance_1={distance_1}, distance_2={distance_2}")
         return False
 
-    def latlon_to_xy(lat, lon, lat0, lon0):
+    def latlon_to_xy(lat: float, lon: float, lat0: float, lon0: float) -> tuple[float, float]:
+        """Convert lat/lon to local x/y meters relative to a reference point."""
         R = 6371000
         x = math.radians(lon - lon0) * R * math.cos(math.radians(lat0))
         y = math.radians(lat - lat0) * R
         return x, y
 
-    def xy_to_latlon(x, y, lat0, lon0):
+    def xy_to_latlon(x: float, y: float, lat0: float, lon0: float) -> tuple[float, float]:
+        """Convert local x/y meters back to lat/lon relative to a reference point."""
         R = 6371000
         lat = lat0 + math.degrees(y / R)
         lon = lon0 + math.degrees(x / (R * math.cos(math.radians(lat0))))
         return lat, lon
 
-    def circle_intersections(x1, y1, d1, x2, y2, d2):
+    def circle_intersections(x1: float, y1: float, d1: float, x2: float, y2: float, d2: float) -> tuple[tuple[float, float], tuple[float, float]] | None:
+        """Return the two intersection points of two circles, or None if they don't intersect."""
         D = math.hypot(x2 - x1, y2 - y1)
 
         if D > d1 + d2 or D < abs(d1 - d2):
@@ -165,7 +191,8 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
         p2 = (xm - rx, ym - ry)
         return p1, p2
 
-    def solve_two_points(lat1, lon1, lat2, lon2, d1, d2):
+    def solve_two_points(lat1: float, lon1: float, lat2: float, lon2: float, d1: float, d2: float) -> tuple[tuple[float, float], tuple[float, float]] | None:
+        """Trilaterate two candidate lat/lon positions from two reference points and their distances."""
         lat0 = (lat1 + lat2) / 2
         lon0 = (lon1 + lon2) / 2
         x1, y1 = latlon_to_xy(lat1, lon1, lat0, lon0)
