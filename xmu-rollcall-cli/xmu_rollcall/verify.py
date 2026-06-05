@@ -6,7 +6,7 @@ import math
 from typing import Any
 
 import requests
-from .utils import retry_request, base_url, headers
+from .utils import retry_request, BASE_URL, HEADERS
 
 def find_number_code(data: Any, depth: int = 0, max_depth: int = 10) -> str | None:
     """Extract number_code from nested dict/list API responses.
@@ -46,8 +46,8 @@ def send_code(in_session: requests.Session, rollcall_id: int) -> bool:
     Returns:
         True if the rollcall was answered successfully, False otherwise.
     """
-    code_url = f"{base_url}/api/rollcall/{rollcall_id}/student_rollcalls"
-    answer_url = f"{base_url}/api/rollcall/{rollcall_id}/answer_number_rollcall"
+    code_url = f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls"
+    answer_url = f"{BASE_URL}/api/rollcall/{rollcall_id}/answer_number_rollcall"
     print("Trying number code from API...")
     t00 = time.time()
     request_headers = in_session.headers
@@ -113,7 +113,7 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
     Returns:
         True if the rollcall was answered successfully, False otherwise.
     """
-    url = f"{base_url}/api/rollcall/{rollcall_id}/answer"
+    url = f"{BASE_URL}/api/rollcall/{rollcall_id}/answer"
 
     lat_1, lat_2 = 24.3, 24.6
     lon_1, lon_2 = 118.0, 118.2
@@ -132,7 +132,7 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
         }
 
     res_1 = retry_request(
-        lambda: in_session.put(url, json=payload(lat_1, lon_1), headers=headers, timeout=15),
+        lambda: in_session.put(url, json=payload(lat_1, lon_1), headers=HEADERS, timeout=15),
         max_attempts=3, delay=2, label="radar_1",
     )
     data_1 = res_1.json()
@@ -141,7 +141,7 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
         return True
 
     res_2 = retry_request(
-        lambda: in_session.put(url, json=payload(lat_2, lon_2), headers=headers, timeout=15),
+        lambda: in_session.put(url, json=payload(lat_2, lon_2), headers=HEADERS, timeout=15),
         max_attempts=3, delay=2, label="radar_2",
     )
     data_2 = res_2.json()
@@ -215,12 +215,12 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
     payload_1 = payload(sol_x_1, sol_y_1)
     payload_2 = payload(sol_x_2, sol_y_2)
 
-    res_3 = in_session.put(url, json=payload_1, headers=headers, timeout=15)
+    res_3 = in_session.put(url, json=payload_1, headers=HEADERS, timeout=15)
     if res_3.status_code == 200:
         return True
     else:
         print(res_3.json())
-        res_4 = in_session.put(url, json=payload_2, headers=headers, timeout=15)
+        res_4 = in_session.put(url, json=payload_2, headers=HEADERS, timeout=15)
         if res_4.status_code == 200:
             return True
 
