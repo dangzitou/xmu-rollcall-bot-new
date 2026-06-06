@@ -1,3 +1,11 @@
+"""Rollcall detection, processing and auto-answering logic.
+
+This module provides the core handler that processes incoming rollcall
+detections, determines their type (QR code / number / radar), waits
+for the configured delay or classmate threshold, and dispatches the
+appropriate sign-in action.
+"""
+
 from __future__ import annotations
 
 import time
@@ -84,7 +92,14 @@ def process_rollcalls(data: dict, session: requests.Session, account: dict | Non
     return data
 
 def extract_rollcalls(data: dict) -> tuple[int, list[dict]]:
-    """提取签到信息"""
+    """Extract and normalise rollcall entries from raw API data.
+
+    Args:
+        data: Raw API response containing a ``rollcalls`` list.
+
+    Returns:
+        A tuple of (count, normalised_rollcall_dicts).
+    """
     rollcalls = data.get('rollcalls', [])
     result = [
         {field: rc[field] for field in _SIGNED_FIELDS}
@@ -131,7 +146,16 @@ def confirm_before_answer(settings: dict) -> bool:
     return answer == "y"
 
 def handle_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> list[bool]:
-    """处理签到流程"""
+    """Process each rollcall entry: detect type, apply delays, and sign in.
+
+    Args:
+        data: Raw API response containing a ``rollcalls`` list.
+        session: Authenticated HTTP session.
+        account: Optional account configuration dict for notifications.
+
+    Returns:
+        A list of booleans indicating success for each rollcall entry.
+    """
     count, rollcalls = extract_rollcalls(data)
     answer_status = [False] * count
     settings = get_rollcall_settings(account or {})
