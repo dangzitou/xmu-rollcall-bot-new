@@ -98,14 +98,29 @@ def normalize_rollcall_settings(settings: dict | None) -> dict:
     return merged
 
 def ensure_config_dir() -> None:
-    """确保配置目录存在"""
+    """确保配置目录存在。
+
+    Raises:
+        RuntimeError: 当配置目录无法创建时抛出，并提示设置
+            ``XMU_ROLLCALL_CONFIG_DIR`` 环境变量。
+    """
     try:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     except (OSError, PermissionError) as e:
         raise RuntimeError(f"无法创建配置目录 {CONFIG_DIR}: {e}\n提示：可以设置环境变量 XMU_ROLLCALL_CONFIG_DIR 指定配置目录位置")
 
 def load_config() -> dict:
-    """加载配置文件"""
+    """加载配置文件。
+
+    读取 ``CONFIG_FILE`` 中的 JSON 配置。若文件不存在则返回
+    :data:`DEFAULT_CONFIG` 的副本。同时兼容旧版单账号格式，自动迁移。
+
+    Returns:
+        解析后的配置字典，包含 ``accounts`` 列表和 ``current_account_id``。
+
+    Raises:
+        RuntimeError: 配置文件存在但内容无法解析时抛出。
+    """
     ensure_config_dir()
     if CONFIG_FILE.exists():
         try:
@@ -144,20 +159,43 @@ def load_config() -> dict:
     return DEFAULT_CONFIG.copy()
 
 def save_config(config: dict) -> None:
-    """保存配置文件"""
+    """将配置字典序列化并写入 ``CONFIG_FILE``。
+
+    Args:
+        config: 完整的配置字典（需包含 ``accounts`` 等键）。
+    """
     ensure_config_dir()
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
 def get_next_account_id(config: dict) -> int:
-    """获取下一个可用的账号ID"""
+    """计算下一个可用的账号 ID。
+
+    Args:
+        config: 配置字典，需包含 ``accounts`` 列表。
+
+    Returns:
+        当前最大账号 ID 加 1；无账号时返回 1。
+    """
     accounts = config.get("accounts", [])
     if not accounts:
         return 1
     return max(acc.get("id", 0) for acc in accounts) + 1
 
 def add_account(config: dict, username: str, password: str, name: str) -> int:
-    """添加新账号"""
+    """向配置中添加新账号。
+
+    如果尚无账号，新账号同时被设为当前账号。
+
+    Args:
+        config: 配置字典。
+        username: 登录用户名。
+        password: 登录密码。
+        name: 账号显示名称。
+
+    Returns:
+        新分配的账号 ID。
+    """
     account_id = get_next_account_id(config)
     new_account = {
         "id": account_id,
@@ -176,21 +214,41 @@ def add_account(config: dict, username: str, password: str, name: str) -> int:
     return account_id
 
 def get_account_by_id(config: dict, account_id: int) -> dict | None:
-    """通过ID获取账号"""
+    """通过 ID 查找账号。
+
+    Args:
+        config: 配置字典。
+        account_id: 要查找的账号 ID。
+
+    Returns:
+        匹配的账号字典，未找到时返回 ``None``。
+    """
     for acc in config.get("accounts", []):
         if acc.get("id") == account_id:
             return acc
     return None
 
 def get_current_account(config: dict) -> dict | None:
-    """获取当前选中的账号"""
+    """获取当前选中的账号。
+
+    Args:
+        config: 配置字典。
+
+    Returns:
+        当前账号字典；未设置时返回 ``None``。
+    """
     current_id = config.get("current_account_id")
     if current_id is None:
         return None
     return get_account_by_id(config, current_id)
 
 def set_current_account(config: dict, account_id: int) -> None:
-    """设置当前账号"""
+    """设置当前账号。
+
+    Args:
+        config: 配置字典。
+        account_id: 要切换到的账号 ID。
+    """
     config["current_account_id"] = account_id
 
 def get_rollcall_settings(account: dict) -> dict:
@@ -213,11 +271,28 @@ def set_notification_settings(account: dict, settings: dict) -> None:
 
 
 def get_all_accounts(config: dict) -> list[dict]:
-    """获取所有账号"""
+    """获取配置中的所有账号列表。
+
+    Args:
+        config: 配置字典。
+
+    Returns:
+        账号字典列表，配置中无 ``accounts`` 键时返回空列表。
+    """
     return config.get("accounts", [])
 
 def is_config_complete(config: dict) -> bool:
-    """检查配置是否完整（至少有一个账号且已选择当前账号）"""
+    """检查配置是否完整。
+
+    要求至少存在一个账号且已选为当前账号，同时 ``username`` 和
+    ``password`` 均非空。
+
+    Args:
+        config: 配置字典。
+
+    Returns:
+        配置完整返回 ``True``，否则 ``False``。
+    """
     current_account = get_current_account(config)
     if current_account is None:
         return False
@@ -225,7 +300,14 @@ def is_config_complete(config: dict) -> bool:
     return all(current_account.get(field) for field in required_fields)
 
 def get_cookies_path(account_id: int | None = None) -> str:
-    """获取cookies文件路径，根据账号ID命名"""
+    """获取指定账号的 cookies 文件路径。
+
+    Args:
+        account_id: 账号 ID。为 ``None`` 时自动使用当前账号。
+
+    Returns:
+        cookies 文件的绝对路径字符串。
+    """
     ensure_config_dir()
     if account_id is None:
         config = load_config()
@@ -233,9 +315,22 @@ def get_cookies_path(account_id: int | None = None) -> str:
     return str(CONFIG_DIR / f"{account_id}.json")
 
 def delete_account(config: dict, account_id: int) -> tuple[bool, list[str], dict[str, str]]:
-    """
-    删除账号并重新编号
-    返回: (成功删除, 被删除账号的旧cookies路径列表, 需要重命名的cookies映射)
+    """删除指定账号并重新编号剩余账号。
+
+    删除后 ID 大于被删账号的账号会自动前移，保持 ID 连续。
+    若删除的是当前账号，会自动切换到第一个账号。
+
+    Args:
+        config: 配置字典。
+        account_id: 要删除的账号 ID。
+
+    Returns:
+        三元组 ``(success, cookies_to_delete, cookies_to_rename)``：
+
+        - ``success``: 是否找到并删除了该账号。
+        - ``cookies_to_delete``: 需要删除的 cookies 文件路径列表。
+        - ``cookies_to_rename``: 需要重命名的 cookies 文件映射
+          （旧路径 → 新路径）。
     """
     import os
 
@@ -290,7 +385,14 @@ def delete_account(config: dict, account_id: int) -> tuple[bool, list[str], dict
     return True, cookies_to_delete, cookies_to_rename
 
 def perform_account_deletion(cookies_to_delete: str, cookies_to_rename: dict[str, str]) -> None:
-    """执行cookies文件的删除和重命名操作"""
+    """执行 cookies 文件的删除和重命名操作。
+
+    按旧路径字典序依次重命名，避免覆盖冲突。
+
+    Args:
+        cookies_to_delete: 需要删除的 cookies 文件路径。
+        cookies_to_rename: 旧路径 → 新路径的映射。
+    """
     import os
 
     # 删除被删除账号的cookies
