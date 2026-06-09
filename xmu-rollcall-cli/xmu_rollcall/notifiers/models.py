@@ -67,6 +67,16 @@ class NotificationMessage:
 
 
 def describe_rollcall_type(rollcall: dict) -> str:
+    """Return a human-readable label for the rollcall detection method.
+
+    Args:
+        rollcall: Rollcall event dictionary, expected to contain boolean
+            flags ``is_radar`` and ``is_number``.
+
+    Returns:
+        One of ``"Radar rollcall"``, ``"Number rollcall"``, or
+        ``"QRcode rollcall"``.
+    """
     if rollcall.get("is_radar"):
         return "Radar rollcall"
     if rollcall.get("is_number"):
