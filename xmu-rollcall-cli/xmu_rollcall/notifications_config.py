@@ -20,7 +20,20 @@ def default_notifications_config() -> dict:
 
 
 def normalize_notifications_config(config: dict | None) -> dict:
-    """Merge user-supplied notification config with defaults and return normalized result."""
+    """Merge user-supplied notification config with defaults and return normalized result.
+
+    Missing keys are filled from :func:`default_notifications_config`.  The
+    nested ``target`` dict is merged separately so that a partial override
+    (e.g. only ``target.type``) does not discard the other sub-keys.
+
+    Args:
+        config: Raw notification configuration from the user's account file,
+            or ``None`` if no configuration was provided.
+
+    Returns:
+        A fully-populated notification configuration dict with the same
+        schema as :func:`default_notifications_config`.
+    """
     merged = default_notifications_config()
     target = (config or {}).get("target") or {}
     merged.update({
@@ -35,7 +48,23 @@ def normalize_notifications_config(config: dict | None) -> dict:
 
 
 def get_notification_target(notifications_config: dict | None) -> NotificationTarget:
-    """Resolve the effective notification target from config."""
+    """Resolve the effective notification target from config.
+
+    Normalizes the raw config, then builds a :class:`NotificationTarget`
+    based on the ``target.type`` field:
+
+    * ``"fixed"`` — the ``value`` is used directly as a chat-id or URL.
+    * ``"env"`` (default) — the ``value`` is treated as the name of an
+      environment variable that holds the actual target identifier.
+
+    Args:
+        notifications_config: Raw notification configuration dict, or
+            ``None`` to fall back to defaults.
+
+    Returns:
+        A :class:`NotificationTarget` ready to be resolved via
+        :meth:`~NotificationTarget.resolve`.
+    """
     config = normalize_notifications_config(notifications_config)
     target = config["target"]
     if target["type"] == "fixed":
