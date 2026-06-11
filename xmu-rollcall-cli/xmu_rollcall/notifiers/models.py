@@ -9,18 +9,37 @@ import time
 
 @dataclass(frozen=True)
 class NotificationTarget:
+    """Represents a notification delivery target.
+
+    A target can be either a *fixed* value (e.g. a chat-id or webhook URL)
+    or an *env* reference whose actual value is resolved at runtime from
+    an environment variable.
+
+    Attributes:
+        target_type: Either ``"fixed"`` or ``"env"``.
+        value: The fixed value itself, or the environment variable name.
+    """
+
     target_type: str
     value: str
 
     @classmethod
     def from_value(cls, value: str) -> "NotificationTarget":
+        """Create a target with a fixed value (e.g. a chat-id)."""
         return cls(target_type="fixed", value=value)
 
     @classmethod
     def from_env_name(cls, env_name: str) -> "NotificationTarget":
+        """Create a target whose value is read from an environment variable."""
         return cls(target_type="env", value=env_name)
 
     def resolve(self) -> str | None:
+        """Resolve the effective target string.
+
+        Returns:
+            The resolved string, or ``None`` if the value is empty or
+            the environment variable is unset.
+        """
         if self.target_type == "fixed":
             return self.value.strip() or None
         if self.target_type == "env":
@@ -30,6 +49,13 @@ class NotificationTarget:
 
 @dataclass(frozen=True)
 class NotificationMessage:
+    """A structured notification message for rollcall alerts.
+
+    Attributes:
+        title: The message header (e.g. ``"[XMU Rollcall Alert]"``).
+        lines: Body lines of the notification.
+    """
+
     title: str
     lines: tuple[str, ...]
 
