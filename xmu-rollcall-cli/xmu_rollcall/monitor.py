@@ -244,7 +244,15 @@ def update_footer_text() -> None:
     sys.stdout.flush()
 
 def start_monitor(account: dict) -> None:
-    """启动监控程序"""
+    """启动点名监控主循环。
+
+    初始化登录会话后，以轮询方式持续查询点名 API。当检测到新的
+    点名事件时自动触发通知流程，并在终端仪表板上实时刷新状态。
+
+    Args:
+        account: 账户配置字典，必须包含 ``username``、``password``，
+            可选 ``id``、``name`` 等字段。
+    """
     USERNAME = account['username']
     PASSWORD = account['password']
     ACCOUNT_ID = account.get('id', 1)
