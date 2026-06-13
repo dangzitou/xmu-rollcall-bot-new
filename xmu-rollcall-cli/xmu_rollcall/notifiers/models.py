@@ -61,6 +61,20 @@ class NotificationMessage:
 
     @classmethod
     def from_rollcall(cls, account_name: str, rollcall: dict, detected_at: float | None = None) -> "NotificationMessage":
+        """Build a notification message from a rollcall event dict.
+
+        Extracts teacher, course, department, rollcall type, and optional
+        number code from the raw event payload and formats them into a
+        structured :class:`NotificationMessage`.
+
+        Args:
+            account_name: Display name of the account that detected the event.
+            rollcall: Raw rollcall event dictionary from the Tronclass API.
+            detected_at: Unix timestamp of detection; defaults to now.
+
+        Returns:
+            A frozen :class:`NotificationMessage` ready for delivery.
+        """
         detected_at = time.time() if detected_at is None else detected_at
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(detected_at))
         account_display = account_name or "(unknown account)"
@@ -89,6 +103,12 @@ class NotificationMessage:
         )
 
     def render_text(self) -> str:
+        """Render the notification as a plain-text string.
+
+        Returns:
+            Title and body lines joined by newlines, suitable for
+            text-based notification channels.
+        """
         return "\n".join((self.title, *self.lines))
 
 
