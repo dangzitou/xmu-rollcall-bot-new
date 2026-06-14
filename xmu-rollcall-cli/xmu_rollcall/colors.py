@@ -1,6 +1,10 @@
 """Shared ANSI color constants and helper utilities for terminal output."""
 
+from __future__ import annotations
+
 import re
+
+__all__ = ["Colors", "colored", "strip_ansi"]
 
 _ANSI_RE = re.compile(r'\033\[[0-9;]*m')
 
