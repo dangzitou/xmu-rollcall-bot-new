@@ -1,5 +1,13 @@
-import os
+"""Configuration management for XMU Rollcall CLI.
+
+Handles config directory resolution (with sandbox fallback), account CRUD,
+rollcall settings normalization, and cookies file path management.
+"""
+
+from __future__ import annotations
+
 import json
+import os
 from pathlib import Path
 
 from .notifications_config import default_notifications_config, normalize_notifications_config
