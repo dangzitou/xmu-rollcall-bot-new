@@ -129,7 +129,15 @@ _COLOR_PALETTE = (
 _COLOR_COUNT = len(_COLOR_PALETTE)
 
 def get_colorful_text(text: str, color_offset: int = 0) -> str:
-    """为文本的每个字符应用不同的颜色"""
+    """为文本的每个字符应用不同的 ANSI 颜色。
+
+    Args:
+        text: 待着色的文本。
+        color_offset: 颜色起始偏移量，用于实现渐变动画效果。
+
+    Returns:
+        每个字符都带有不同颜色前缀并以重置码结尾的字符串。
+    """
     return ''.join(
         _COLOR_PALETTE[(i + color_offset) % _COLOR_COUNT] + char
         for i, char in enumerate(text)
@@ -193,14 +201,31 @@ NIGHTTIME_HEARTBEAT_INTERVAL = 3600
 
 
 def get_heartbeat_interval_for_hour_minute(hour: int, minute: int) -> int:
-    """根据时段返回心跳间隔（秒）。白天 07:00-18:29 为 5 分钟，其余为 1 小时。"""
+    """根据时段返回心跳间隔（秒）。
+
+    白天 07:00–18:29 为 5 分钟间隔，其余时段为 1 小时间隔。
+
+    Args:
+        hour: 当前小时（0–23）。
+        minute: 当前分钟（0–59）。
+
+    Returns:
+        心跳间隔秒数，日间返回 :data:`DAYTIME_HEARTBEAT_INTERVAL`，
+        夜间返回 :data:`NIGHTTIME_HEARTBEAT_INTERVAL`。
+    """
     if (hour > 7 or (hour == 7 and minute >= 0)) and (hour < 18 or (hour == 18 and minute < 30)):
         return DAYTIME_HEARTBEAT_INTERVAL
     return NIGHTTIME_HEARTBEAT_INTERVAL
 
 
 def log_heartbeat(local_time: str, running_time: str, query_count: int) -> None:
-    """在非交互模式下输出周期性心跳日志。"""
+    """在非交互模式下输出周期性心跳日志。
+
+    Args:
+        local_time: 格式化的当前时间字符串。
+        running_time: 格式化的运行时长字符串。
+        query_count: 累计查询次数。
+    """
     if INTERACTIVE_TTY:
         return
     print(
@@ -210,7 +235,14 @@ def log_heartbeat(local_time: str, running_time: str, query_count: int) -> None:
     )
 
 def update_status_line(line_num: int, label: str, value: str, color: str) -> None:
-    """更新指定行的状态信息，不清屏"""
+    """使用 ANSI 光标定位更新指定行的状态信息，不刷新整个屏幕。
+
+    Args:
+        line_num: 目标行号（1-indexed）。
+        label: 状态标签文本。
+        value: 要显示的值。
+        color: 用于高亮值的 ANSI 颜色代码。
+    """
     if not INTERACTIVE_TTY:
         return
     sys.stdout.write("\033[?25l")
@@ -223,7 +255,10 @@ def update_status_line(line_num: int, label: str, value: str, color: str) -> Non
     sys.stdout.flush()
 
 def update_footer_text() -> None:
-    """更新底部彩色文字，不清屏"""
+    """更新底部彩色签名文字，不刷新整个屏幕。
+
+    仅在交互终端模式下有效，非交互模式为 no-op。
+    """
     if not INTERACTIVE_TTY:
         return
     text = "XMU-Rollcall-Bot @ KrsMt"
