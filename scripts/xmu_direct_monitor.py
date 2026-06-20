@@ -39,14 +39,15 @@ sys.stderr.reconfigure(line_buffering=True)
 
 _log_fh = open(LOG_FILE, 'a', buffering=1)
 
-def p(msg):
+def p(msg: str) -> None:
+    """Write *msg* to stdout and the persistent log file."""
     line = msg + '\n'
     sys.stdout.write(line)
     sys.stdout.flush()
     _log_fh.write(line)
 
-def pe(msg, exc=None):
-    """Log error with optional traceback."""
+def pe(msg: str, exc: BaseException | None = None) -> None:
+    """Write an error message to stdout and log, with optional traceback."""
     _log_fh.write(f"[ERROR] {msg}\n")
     sys.stdout.write(f"[ERROR] {msg}\n")
     if exc:
