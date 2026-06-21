@@ -150,7 +150,18 @@ def print_footer_text(color_offset: int = 0) -> None:
     print(center_text(colored))
 
 def print_dashboard(name: str, start_time: float, query_count: int, banner_frame: int = 0, show_banner: bool = True) -> None:
-    """打印主仪表板"""
+    """打印主仪表板，包含系统状态和签到监控信息。
+
+    清屏后重新渲染整个终端界面，显示当前时间、运行时长、查询计数
+    以及签到监控状态。支持彩色渐变底部横幅动画。
+
+    Args:
+        name: 当前登录用户的显示名称。
+        start_time: 程序启动的 Unix 时间戳，用于计算运行时长。
+        query_count: 已执行的签到查询次数。
+        banner_frame: 底部横幅动画的当前帧号（颜色偏移量）。
+        show_banner: 是否显示底部彩色横幅，默认为 True。
+    """
     clear_screen()
     print_banner()
 
@@ -186,7 +197,12 @@ def print_dashboard(name: str, start_time: float, query_count: int, banner_frame
         print_footer_text(banner_frame)
 
 def print_login_status(message: str, is_success: bool = True) -> None:
-    """打印登录状态"""
+    """打印登录状态信息，成功显示绿色，失败显示红色。
+
+    Args:
+        message: 要显示的状态消息文本。
+        is_success: True 表示登录成功（绿色），False 表示失败（红色）。
+    """
     if is_success:
         print(f"{Colors.OKGREEN}[SUCCESS]{Colors.ENDC} {message}")
     else:
