@@ -44,8 +44,14 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | No
         pass
     return None
 
-def wait_for_classmates(session, rollcall_id: int, settings: dict) -> None:
-    """根据配置等待足够多的同学签到后再签，最多等待120秒。"""
+def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: dict) -> None:
+    """根据配置等待足够多的同学签到后再签，最多等待120秒。
+
+    Args:
+        session: 已认证的 requests 会话。
+        rollcall_id: 签到事件 ID。
+        settings: 签到设置字典，包含 ``wait_before_answer_mode`` 等字段。
+    """
     mode = settings.get("wait_before_answer_mode", "none")
     if mode == "none":
         return
