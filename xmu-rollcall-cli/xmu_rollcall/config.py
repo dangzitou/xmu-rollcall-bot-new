@@ -71,7 +71,20 @@ DEFAULT_ACCOUNT = {
 DEFAULT_ROLLCALL_SETTINGS = DEFAULT_ACCOUNT["rollcall_settings"].copy()
 
 def normalize_rollcall_settings(settings: dict | None) -> dict:
-    """Normalize rollcall settings and fill defaults."""
+    """Normalize rollcall settings and fill defaults.
+
+    Merges the caller-supplied *settings* with
+    :data:`DEFAULT_ROLLCALL_SETTINGS`, coercing integer fields to
+    non-negative ints and ensuring ``*_max >= *_min`` invariants.
+
+    Args:
+        settings: Raw rollcall settings dict from user config, or
+            ``None`` to use all defaults.
+
+    Returns:
+        A fully-populated settings dict matching the
+        ``rollcall_settings`` schema (all keys guaranteed present).
+    """
     merged = DEFAULT_ROLLCALL_SETTINGS.copy()
     merged.update(settings or {})
 
