@@ -1,3 +1,12 @@
+"""Rollcall answer strategies: number-code and radar (location-based) sign-in.
+
+This module provides the two main rollcall verification paths:
+
+- :func:`send_code` — fetches a number code from the API and submits it.
+- :func:`send_radar` — uses two probe locations and trilateration to answer
+  location-based rollcalls when the exact sign-in position is unknown.
+"""
+
 from __future__ import annotations
 
 import uuid
