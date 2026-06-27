@@ -1,3 +1,13 @@
+"""Command-line interface for XMU Rollcall Bot.
+
+Provides four subcommands:
+
+- ``config``  — interactive account and settings management (add / delete / configure).
+- ``switch``  — switch the active account.
+- ``start``   — begin monitoring for rollcalls.
+- ``refresh`` — clear cached login cookies for the current account.
+"""
+
 import click
 import sys
 from . import __version__
