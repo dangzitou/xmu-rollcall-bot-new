@@ -30,9 +30,18 @@ _SIGNED_STATUSES = {'on_call_fine'}
 
 
 def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | None:
-    """查询当前签到已签人数。"""
+    """Query the API for the number of students who have already signed in.
+
+    Args:
+        session: Authenticated requests session with valid cookies.
+        rollcall_id: The rollcall event ID to query.
+
+    Returns:
+        The count of students who have answered, or ``None`` if the
+        request fails.
+    """
     try:
-        from .verify import base_url
+        from .utils import base_url
         resp = session.get(
             f"{base_url}/api/rollcall/{rollcall_id}/student_rollcalls",
             timeout=10,
