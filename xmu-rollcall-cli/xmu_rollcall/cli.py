@@ -30,7 +30,12 @@ from .monitor import start_monitor, base_url, headers
 @click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="xmu")
 @click.pass_context
-def cli(ctx):
+def cli(ctx: click.Context) -> None:
+    """Top-level command group for the XMU Rollcall Bot CLI.
+
+    When invoked without a subcommand, prints usage help and the
+    default notification target environment variable name.
+    """
     if ctx.invoked_subcommand is None:
         click.echo(f"{Colors.OKCYAN}{Colors.BOLD}XMU Rollcall Bot CLI v{__version__}{Colors.ENDC}")
         click.echo(f"\nUsage:")
