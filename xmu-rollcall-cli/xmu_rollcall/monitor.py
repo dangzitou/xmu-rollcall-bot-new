@@ -1,3 +1,7 @@
+"""Main monitoring loop for XMU rollcall detection and notification."""
+
+from __future__ import annotations
+
 import time
 import os
 import sys
@@ -16,7 +20,7 @@ from .rollcall_handler import process_rollcalls
 from .config import get_cookies_path
 from .colors import Colors
 
-interval = 1
+interval: int = 1
 
 BOLD_LABEL = f"{Colors.BOLD}"
 CYAN_TEXT = f"{Colors.OKCYAN}"
