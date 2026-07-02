@@ -15,7 +15,7 @@ disable_system_proxies()
 
 from xmulogin import xmulogin
 from .utils import clear_screen, save_session, load_session, verify_session, supports_interactive_terminal, retry_request
-from .utils import base_url, headers
+from .utils import BASE_URL, HEADERS
 from .rollcall_handler import process_rollcalls
 from .config import get_cookies_path
 from .colors import Colors
@@ -319,7 +319,7 @@ def start_monitor(account: dict) -> None:
     # set_location(LATITUDE, LONGITUDE)
 
     cookies_path = get_cookies_path(ACCOUNT_ID)
-    rollcalls_url = f"{base_url}/api/radar/rollcalls"
+    rollcalls_url = f"{BASE_URL}/api/radar/rollcalls"
     session = None
 
     # 初始化
@@ -356,7 +356,7 @@ def start_monitor(account: dict) -> None:
             sys.exit(1)
 
     print(f"{Colors.OKCYAN}[Step 3/3]{Colors.ENDC} Fetching user profile...")
-    # profile = session.get(f"{base_url}/api/profile", headers=headers).json()
+    # profile = session.get(f"{BASE_URL}/api/profile", headers=HEADERS).json()
     # name = profile["name"]
     print_login_status(f"Welcome, {ACCOUNT_NAME}", True)
 
@@ -394,7 +394,7 @@ def start_monitor(account: dict) -> None:
                 if elapsed > _last_query_time:
                     _last_query_time = elapsed
                     data = retry_request(
-                        lambda: session.get(rollcalls_url, headers=headers, timeout=30),
+                        lambda: session.get(rollcalls_url, headers=HEADERS, timeout=30),
                         max_attempts=3, delay=2, label="poll",
                     ).json()
                     query_count += 1
