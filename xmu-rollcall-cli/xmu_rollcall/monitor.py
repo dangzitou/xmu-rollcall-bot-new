@@ -16,6 +16,9 @@ disable_system_proxies()
 from xmulogin import xmulogin
 from .utils import clear_screen, save_session, load_session, verify_session, supports_interactive_terminal, retry_request
 from .utils import BASE_URL, HEADERS
+
+base_url = BASE_URL
+headers = HEADERS
 from .rollcall_handler import process_rollcalls
 from .config import get_cookies_path
 from .colors import Colors
