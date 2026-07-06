@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -20,7 +21,7 @@ HERMES_REPO = Path(
 HERMES_HOME = Path.home() / ".hermes"
 
 
-def _load_hermes_send_message_tool():
+def _load_hermes_send_message_tool() -> Callable[..., object]:
     if str(HERMES_REPO) not in sys.path:
         sys.path.insert(0, str(HERMES_REPO))
 

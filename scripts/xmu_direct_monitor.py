@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""XMU Rollcall Bot direct monitor.
+
+Manages the rollcall monitoring process with heartbeat logging,
+log rotation, and real-time dashboard display.
+"""
+
 import sys, os, time, json, traceback
 
 CLI_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
