@@ -174,12 +174,15 @@ def print_dashboard(name: str, start_time: float, query_count: int, banner_frame
 
     local_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
-    if time.localtime().tm_hour < 12 and time.localtime().tm_hour >= 5:
+    hour = time.localtime().tm_hour
+    if 5 <= hour < 12:
         greeting = "Good morning"
-    elif time.localtime().tm_hour < 18 and time.localtime().tm_hour >= 12:
+    elif 12 <= hour < 18:
         greeting = "Good afternoon"
-    else:
+    elif 18 <= hour < 22:
         greeting = "Good evening"
+    else:
+        greeting = "Good night"
 
     now = time.time()
     running_time = int(now - start_time)
