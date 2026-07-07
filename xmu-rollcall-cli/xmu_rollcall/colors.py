@@ -6,7 +6,7 @@ import re
 
 __all__ = ["Colors", "colored", "strip_ansi"]
 
-_ANSI_RE = re.compile(r'\033\[[0-9;]*m')
+_ANSI_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 class Colors:

@@ -7,7 +7,6 @@ import os
 import sys
 import requests
 import shutil
-import re
 from . import __version__
 from .proxy_guard import disable_system_proxies
 
@@ -21,7 +20,7 @@ base_url = BASE_URL
 headers = HEADERS
 from .rollcall_handler import process_rollcalls
 from .config import get_cookies_path
-from .colors import Colors
+from .colors import Colors, strip_ansi
 
 interval: int = 1
 
@@ -42,19 +41,6 @@ def get_terminal_width() -> int:
         return shutil.get_terminal_size().columns
     except Exception:
         return 80
-
-_ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-
-def strip_ansi(text: str) -> str:
-    """移除 ANSI 转义序列以计算实际显示文本长度。
-
-    Args:
-        text: 可能包含 ANSI 颜色代码的字符串。
-
-    Returns:
-        去除所有 ANSI 转义序列后的纯文本。
-    """
-    return _ANSI_ESCAPE.sub('', text)
 
 def center_text(text: str, width: int | None = None) -> str:
     """将文本居中对齐到指定宽度。
