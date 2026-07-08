@@ -90,7 +90,7 @@ HEADERS: dict[str, str] = {
     "Accept-Language": "zh-CN,zh;q=0.9",
     "Referer": "https://ids.xmu.edu.cn/authserver/login",
 }
-"""Default HTTP headers mimicking a desktop browser."""
+"""Default HTTP headers mimicking a standard Chrome browser."""
 
 def clear_screen() -> None:
     """Clear the terminal screen.
