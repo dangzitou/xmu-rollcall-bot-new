@@ -114,14 +114,9 @@ if not session:
 p(f"Welcome, {acc['name']}")
 p("Starting monitoring...")
 
-base_url = "https://lnt.xmu.edu.cn"
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "zh-CN,zh;q=0.9",
-    "Referer": "https://ids.xmu.edu.cn/authserver/login",
-}
-rollcalls_url = f"{base_url}/api/radar/rollcalls"
+from xmu_rollcall.utils import BASE_URL, HEADERS
+
+rollcalls_url = f"{BASE_URL}/api/radar/rollcalls"
 temp_data = {'rollcalls': []}
 query_count = 0
 start_time = time.time()
@@ -139,7 +134,7 @@ try:
         
         try:
             resp = retry_request(
-                lambda: session.get(rollcalls_url, headers=headers, timeout=30),
+                lambda: session.get(rollcalls_url, headers=HEADERS, timeout=30),
                 max_attempts=3, delay=2, label="poll",
             )
             resp.raise_for_status()
