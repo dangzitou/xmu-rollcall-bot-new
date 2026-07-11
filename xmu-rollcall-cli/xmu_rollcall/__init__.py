@@ -9,6 +9,7 @@ Modules:
     colors                ANSI 终端颜色常量与便捷着色工具
     events                签到事件通知派发辅助
     notifications_config  通知渠道配置
+    notifiers             通知消息模型与投递接口
     proxy_guard           禁用系统代理以避免校园网环境冲突
 """
 
