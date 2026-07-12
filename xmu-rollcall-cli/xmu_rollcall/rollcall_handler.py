@@ -41,9 +41,9 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | No
         request fails.
     """
     try:
-        from .utils import base_url
+        from .utils import BASE_URL
         resp = session.get(
-            f"{base_url}/api/rollcall/{rollcall_id}/student_rollcalls",
+            f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls",
             timeout=10,
         )
         if resp.status_code == 200:

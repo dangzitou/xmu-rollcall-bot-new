@@ -161,6 +161,17 @@ def verify_session(sess: requests.Session) -> dict[str, Any]:
 
 
 # Backward-compatible aliases (deprecated — use UPPER_CASE versions)
-base_url = BASE_URL
-headers = HEADERS
+import warnings as _warnings
+
+def __getattr__(name: str):
+    """Emit deprecation warnings for legacy lowercase aliases."""
+    _aliases = {"base_url": "BASE_URL", "headers": "HEADERS"}
+    if name in _aliases:
+        _warnings.warn(
+            f"utils.{name} is deprecated, use utils.{_aliases[name]} instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return globals()[_aliases[name]]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
