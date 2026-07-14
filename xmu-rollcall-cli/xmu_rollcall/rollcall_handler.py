@@ -122,35 +122,33 @@ def extract_rollcalls(data: dict) -> tuple[int, list[dict]]:
     ]
     return len(rollcalls), result
 
-def wait_before_number_answer(settings: dict) -> None:
-    """Sleep for a random delay before answering a number rollcall."""
-    delay_min = settings["number_delay_min"]
-    delay_max = settings["number_delay_max"]
+def _wait_with_countdown(delay_min: int, delay_max: int, label: str) -> None:
+    """Sleep for a random delay in [delay_min, delay_max] with a live countdown.
+
+    Args:
+        delay_min: Minimum delay in seconds.
+        delay_max: Maximum delay in seconds (must be >= delay_min for randomness).
+        label: Human-readable rollcall type for status messages (e.g. "number", "radar").
+    """
     delay = random.randint(delay_min, delay_max) if delay_max > delay_min else delay_min
 
     if delay <= 0:
         return
 
-    print(f"Waiting {delay} second(s) before answering number rollcall...")
+    print(f"Waiting {delay} second(s) before answering {label} rollcall...")
     for remaining in range(delay, 0, -1):
         print(f"\rAnswering in {remaining:>3}s. Press Ctrl+C to cancel.", end="", flush=True)
         time.sleep(1)
     print()
+
+
+def wait_before_number_answer(settings: dict) -> None:
+    """Sleep for a random delay before answering a number rollcall."""
+    _wait_with_countdown(settings["number_delay_min"], settings["number_delay_max"], "number")
 
 def wait_before_radar_answer(settings: dict) -> None:
     """Sleep for a random delay before answering a radar rollcall."""
-    delay_min = settings.get("radar_delay_min", 0)
-    delay_max = settings.get("radar_delay_max", 0)
-    delay = random.randint(delay_min, delay_max) if delay_max > delay_min else delay_min
-
-    if delay <= 0:
-        return
-
-    print(f"Waiting {delay} second(s) before answering radar rollcall...")
-    for remaining in range(delay, 0, -1):
-        print(f"\rAnswering in {remaining:>3}s. Press Ctrl+C to cancel.", end="", flush=True)
-        time.sleep(1)
-    print()
+    _wait_with_countdown(settings.get("radar_delay_min", 0), settings.get("radar_delay_max", 0), "radar")
 
 def confirm_before_answer(settings: dict) -> bool:
     """Prompt the user for confirmation before answering, if manual mode is on."""
