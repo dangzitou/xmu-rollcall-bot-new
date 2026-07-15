@@ -224,13 +224,26 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
     payload_1 = payload(sol_x_1, sol_y_1)
     payload_2 = payload(sol_x_2, sol_y_2)
 
-    res_3 = in_session.put(url, json=payload_1, headers=HEADERS, timeout=15)
-    if res_3.status_code == 200:
-        return True
-    else:
-        print(res_3.json())
-        res_4 = in_session.put(url, json=payload_2, headers=HEADERS, timeout=15)
+    try:
+        res_3 = retry_request(
+            lambda: in_session.put(url, json=payload_1, headers=HEADERS, timeout=15),
+            max_attempts=2, delay=1, label="radar_trilat_1",
+        )
+        if res_3.status_code == 200:
+            return True
+        print(f"Radar trilateration point 1 rejected: {res_3.json()}")
+    except requests.RequestException as e:
+        print(f"Radar trilateration point 1 request failed: {e}")
+
+    try:
+        res_4 = retry_request(
+            lambda: in_session.put(url, json=payload_2, headers=HEADERS, timeout=15),
+            max_attempts=2, delay=1, label="radar_trilat_2",
+        )
         if res_4.status_code == 200:
             return True
+        print(f"Radar trilateration point 2 rejected: {res_4.json()}")
+    except requests.RequestException as e:
+        print(f"Radar trilateration point 2 request failed: {e}")
 
     return False
