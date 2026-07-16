@@ -70,7 +70,10 @@ def run_notification_command(payload: dict) -> None:
         raise NotificationError(f"Notification helper script not found: {SEND_HELPER}")
 
     command = [sys.executable, str(SEND_HELPER), json.dumps(payload, ensure_ascii=False)]
-    completed = subprocess.run(command, capture_output=True, text=True)
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        raise NotificationError("Notification helper script timed out after 30s")
     if completed.returncode != 0:
         stderr = (completed.stderr or completed.stdout or "unknown error").strip()
         raise NotificationError(f"Failed to deliver notification: {stderr}")
