@@ -5,7 +5,7 @@ Manages the rollcall monitoring process with heartbeat logging,
 log rotation, and real-time dashboard display.
 """
 
-import sys, os, time, json, traceback
+import sys, os, time, json, traceback, subprocess
 
 CLI_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(CLI_ROOT, 'xmu-rollcall-cli'))
@@ -246,14 +246,21 @@ try:
                             'XMU_ROLLCALL_NOTIFY_TARGET',
                             'qqbot:31C7A9C6D26F148A5067E9A93B86EDA9'
                         )
-                        import subprocess
                         sender = os.path.join(CLI_ROOT, 'scripts', 'send_rollcall_notification.py')
                         payload = json.dumps({"target": notify_target, "message": msg})
-                        subprocess.run(
-                            [sys.executable, sender, payload],
-                            capture_output=True, text=True, timeout=30
-                        )
-                        p(f"QQ notification sent for {cname}")
+                        try:
+                            completed = subprocess.run(
+                                [sys.executable, sender, payload],
+                                capture_output=True, text=True, timeout=30
+                            )
+                        except subprocess.TimeoutExpired:
+                            pe(f"QQ notification timed out after 30s for {cname}")
+                        else:
+                            if completed.returncode != 0:
+                                err = (completed.stderr or completed.stdout or "unknown error").strip()
+                                pe(f"QQ notification failed for {cname}: {err}")
+                            else:
+                                p(f"QQ notification sent for {cname}")
                 except Exception as e:
                     pe("process_rollcalls or notification error", e)
                     

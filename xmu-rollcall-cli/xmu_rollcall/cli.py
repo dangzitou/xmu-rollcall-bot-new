@@ -48,7 +48,7 @@ def cli(ctx: click.Context) -> None:
         click.echo(f"\nNotification target defaults to env var: {DEFAULT_NOTIFICATION_TARGET_ENV}")
 
 @cli.command(help="配置账号、签到安全设置与通知投递")
-def config():
+def config() -> None:
     """配置账号：添加、删除账号"""
     click.echo(f"\n{Colors.BOLD}{Colors.OKCYAN}=== XMU Rollcall Configuration ==={Colors.ENDC}\n")
 
@@ -383,7 +383,7 @@ def config():
             break
 
 @cli.command()
-def start():
+def start() -> None:
     """启动签到监控"""
     # 加载配置
     try:
@@ -413,7 +413,7 @@ def start():
         sys.exit(1)
 
 @cli.command()
-def refresh():
+def refresh() -> None:
     """清除当前账号的登录缓存"""
     try:
         config_data = load_config()
@@ -445,7 +445,7 @@ def refresh():
 
 
 @cli.command()
-def switch():
+def switch() -> None:
     """切换当前使用的账号"""
     click.echo(f"\n{Colors.BOLD}{Colors.OKCYAN}=== Switch Account ==={Colors.ENDC}\n")
 
