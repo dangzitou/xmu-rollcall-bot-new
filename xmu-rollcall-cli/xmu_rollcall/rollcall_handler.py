@@ -41,10 +41,16 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | No
         request fails.
     """
     try:
-        from .utils import BASE_URL
-        resp = session.get(
-            f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls",
-            timeout=10,
+        from .utils import BASE_URL, HEADERS, retry_request
+        resp = retry_request(
+            lambda: session.get(
+                f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls",
+                headers=HEADERS,
+                timeout=10,
+            ),
+            max_attempts=2,
+            delay=1,
+            label="signed_count",
         )
         if resp.status_code == 200:
             students = resp.json().get("student_rollcalls", [])

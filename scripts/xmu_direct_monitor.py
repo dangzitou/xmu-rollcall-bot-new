@@ -193,8 +193,13 @@ try:
                         student_answered_at = None
                         try:
                             from xmu_rollcall.verify import find_number_code
-                            code_url = f"https://lnt.xmu.edu.cn/api/rollcall/{rc['rollcall_id']}/student_rollcalls"
-                            code_resp = session.get(code_url, timeout=10)
+                            code_url = f"{BASE_URL}/api/rollcall/{rc['rollcall_id']}/student_rollcalls"
+                            code_resp = retry_request(
+                                lambda: session.get(code_url, headers=HEADERS, timeout=10),
+                                max_attempts=2,
+                                delay=1,
+                                label="student_rollcalls",
+                            )
                             if code_resp.status_code == 200:
                                 code_data = code_resp.json()
                                 number_code = find_number_code(code_data)
@@ -203,8 +208,8 @@ try:
                                     if sc.get('user_no') == acc.get('username'):
                                         student_answered_at = sc.get('updated_at')
                                         break
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            pe(f"Failed to fetch student_rollcalls for {cname}", e)
 
                         # Parse teacher rollcall time
                         rollcall_time_str = rc.get('rollcall_time', '')
