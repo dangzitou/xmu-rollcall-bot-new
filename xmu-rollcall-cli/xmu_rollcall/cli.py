@@ -25,7 +25,8 @@ from .config import (
 )
 from .notifications_config import DEFAULT_NOTIFICATION_TARGET_ENV
 from .colors import Colors
-from .monitor import start_monitor, base_url, headers
+from .monitor import start_monitor
+from .utils import BASE_URL, HEADERS, retry_request
 
 @click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name="xmu")
@@ -89,8 +90,18 @@ def config() -> None:
                 # 获取用户姓名
                 click.echo(f"{Colors.OKCYAN}Fetching user profile...{Colors.ENDC}")
                 try:
-                    profile = session.get(f"{base_url}/api/profile", headers=headers, timeout=15).json()
-                    name = profile.get("name", "")
+                    profile_resp = retry_request(
+                        lambda: session.get(
+                            f"{BASE_URL}/api/profile",
+                            headers=HEADERS,
+                            timeout=15,
+                        ),
+                        max_attempts=2,
+                        delay=1,
+                        label="fetch_profile",
+                    )
+                    profile = profile_resp.json()
+                    name = profile.get("name", "") if isinstance(profile, dict) else ""
                     click.echo(f"{Colors.OKGREEN}✓ Welcome, {name}!{Colors.ENDC}")
                 except Exception:
                     click.echo(f"{Colors.WARNING}⚠ Could not fetch profile, using username as name{Colors.ENDC}")

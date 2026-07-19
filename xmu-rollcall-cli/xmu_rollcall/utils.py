@@ -140,8 +140,8 @@ def load_session(sess: requests.Session, path: str) -> bool:
 def verify_session(sess: requests.Session) -> dict[str, Any]:
     """Check whether a session is still authenticated.
 
-    Makes a GET request to ``/api/profile`` and returns the parsed JSON
-    if it contains a ``name`` key.
+    Makes a GET request to ``/api/profile`` (with a short retry) and
+    returns the parsed JSON if it contains a ``name`` key.
 
     Args:
         sess: An authenticated :class:`requests.Session`.
@@ -150,7 +150,12 @@ def verify_session(sess: requests.Session) -> dict[str, Any]:
         The profile dict on success, or an empty dict on failure.
     """
     try:
-        resp = sess.get(f"{BASE_URL}/api/profile", headers=HEADERS, timeout=15)
+        resp = retry_request(
+            lambda: sess.get(f"{BASE_URL}/api/profile", headers=HEADERS, timeout=15),
+            max_attempts=2,
+            delay=1,
+            label="verify_session",
+        )
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, dict) and "name" in data:
