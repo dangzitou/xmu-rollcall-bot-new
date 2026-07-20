@@ -59,6 +59,7 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | No
         pass
     return None
 
+
 def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: dict) -> None:
     """根据配置等待足够多的同学签到后再签，最多等待120秒。
 
@@ -95,8 +96,25 @@ def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: d
         time.sleep(WAIT_POLL_INTERVAL)
     print(f"\nTimeout after {WAIT_FOR_CLASSMATES_TIMEOUT}s, proceeding anyway.")
 
+
 def process_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> dict:
-    """处理签到数据，区分 QRcode 需手动处理和真正失败。"""
+    """Process rollcall data, distinguishing QRcode (manual) from real failures.
+
+    Runs :func:`handle_rollcalls` on *data*. If any non-QRcode entry failed
+    (``send_code`` / ``send_radar`` returned false), returns an empty
+    ``rollcalls`` list so callers can treat the batch as incomplete.
+    Otherwise returns the original *data* unchanged (including already-signed
+    and QRcode-manual cases).
+
+    Args:
+        data: Raw API response containing a ``rollcalls`` list.
+        session: Authenticated HTTP session.
+        account: Optional account configuration for delays/notifications.
+
+    Returns:
+        Original *data*, or ``{\"rollcalls\": []}`` when a real auto-answer
+        failure occurred.
+    """
     result = handle_rollcalls(data, session, account)
     rollcalls = data.get('rollcalls', [])
 
@@ -112,8 +130,12 @@ def process_rollcalls(data: dict, session: requests.Session, account: dict | Non
         return {'rollcalls': []}
     return data
 
+
 def extract_rollcalls(data: dict) -> tuple[int, list[dict]]:
     """Extract and normalise rollcall entries from raw API data.
+
+    Missing fields on individual entries are filled with ``None`` so a
+    partial API payload does not raise ``KeyError`` mid-processing.
 
     Args:
         data: Raw API response containing a ``rollcalls`` list.
@@ -123,10 +145,11 @@ def extract_rollcalls(data: dict) -> tuple[int, list[dict]]:
     """
     rollcalls = data.get('rollcalls', [])
     result = [
-        {field: rc[field] for field in _SIGNED_FIELDS}
+        {field: rc.get(field) for field in _SIGNED_FIELDS}
         for rc in rollcalls
     ]
     return len(rollcalls), result
+
 
 def _wait_with_countdown(delay_min: int, delay_max: int, label: str) -> None:
     """Sleep for a random delay in [delay_min, delay_max] with a live countdown.
@@ -152,9 +175,11 @@ def wait_before_number_answer(settings: dict) -> None:
     """Sleep for a random delay before answering a number rollcall."""
     _wait_with_countdown(settings["number_delay_min"], settings["number_delay_max"], "number")
 
+
 def wait_before_radar_answer(settings: dict) -> None:
     """Sleep for a random delay before answering a radar rollcall."""
     _wait_with_countdown(settings.get("radar_delay_min", 0), settings.get("radar_delay_max", 0), "radar")
+
 
 def confirm_before_answer(settings: dict) -> bool:
     """Prompt the user for confirmation before answering, if manual mode is on."""

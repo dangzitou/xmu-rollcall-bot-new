@@ -59,7 +59,7 @@ def config() -> None:
         click.echo(f"{Colors.FAIL}Failed to load config: {str(e)}{Colors.ENDC}")
         sys.exit(1)
 
-    def show_accounts():
+    def show_accounts() -> None:
         """显示账号列表"""
         accounts = get_all_accounts(current_config)
         if accounts:
@@ -72,7 +72,7 @@ def config() -> None:
         else:
             click.echo(f"{Colors.GRAY}No accounts configured.{Colors.ENDC}\n")
 
-    def add_new_account():
+    def add_new_account() -> None:
         """添加新账号"""
         click.echo(f"{Colors.BOLD}Adding a new account...{Colors.ENDC}\n")
 
@@ -123,7 +123,7 @@ def config() -> None:
         except Exception as e:
             click.echo(f"{Colors.FAIL}✗ Error during login validation: {str(e)}{Colors.ENDC}")
 
-    def delete_existing_account():
+    def delete_existing_account() -> None:
         """删除账号"""
         accounts = get_all_accounts(current_config)
         if not accounts:
@@ -175,7 +175,7 @@ def config() -> None:
             click.echo(f"{Colors.FAIL}✗ Account not found.{Colors.ENDC}\n")
 
     # 主循环
-    def configure_rollcall_settings():
+    def configure_rollcall_settings() -> None:
         accounts = get_all_accounts(current_config)
         if not accounts:
             click.echo(f"{Colors.WARNING}No accounts configured.{Colors.ENDC}\n")
@@ -292,7 +292,7 @@ def config() -> None:
             click.echo(f"{Colors.GRAY}Wait for classmates: no wait{Colors.ENDC}")
         click.echo()
 
-    def configure_notifications():
+    def configure_notifications() -> None:
         accounts = get_all_accounts(current_config)
         if not accounts:
             click.echo(f"{Colors.WARNING}No accounts configured.{Colors.ENDC}\n")

@@ -168,7 +168,7 @@ def verify_session(sess: requests.Session) -> dict[str, Any]:
 # Backward-compatible aliases (deprecated — use UPPER_CASE versions)
 import warnings as _warnings
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Emit deprecation warnings for legacy lowercase aliases."""
     _aliases = {"base_url": "BASE_URL", "headers": "HEADERS"}
     if name in _aliases:
