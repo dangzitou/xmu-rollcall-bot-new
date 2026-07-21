@@ -172,22 +172,44 @@ def _wait_with_countdown(delay_min: int, delay_max: int, label: str) -> None:
 
 
 def wait_before_number_answer(settings: dict) -> None:
-    """Sleep for a random delay before answering a number rollcall."""
-    _wait_with_countdown(settings["number_delay_min"], settings["number_delay_max"], "number")
+    """Sleep for a random delay before answering a number rollcall.
+
+    Reads ``number_delay_min`` / ``number_delay_max`` via safe ``.get`` so a
+    partially-filled settings dict (e.g. tests or hand-edited config) does not
+    raise ``KeyError``; missing values default to 0 (no wait).
+    """
+    _wait_with_countdown(
+        settings.get("number_delay_min", 0),
+        settings.get("number_delay_max", 0),
+        "number",
+    )
 
 
 def wait_before_radar_answer(settings: dict) -> None:
-    """Sleep for a random delay before answering a radar rollcall."""
-    _wait_with_countdown(settings.get("radar_delay_min", 0), settings.get("radar_delay_max", 0), "radar")
+    """Sleep for a random delay before answering a radar rollcall.
+
+    Same defensive access pattern as :func:`wait_before_number_answer`.
+    """
+    _wait_with_countdown(
+        settings.get("radar_delay_min", 0),
+        settings.get("radar_delay_max", 0),
+        "radar",
+    )
 
 
 def confirm_before_answer(settings: dict) -> bool:
-    """Prompt the user for confirmation before answering, if manual mode is on."""
-    if not settings["manual_confirm"]:
+    """Prompt the user for confirmation before answering, if manual mode is on.
+
+    Returns:
+        ``True`` when the user confirms or manual confirm is disabled;
+        ``False`` when the user declines the prompt.
+    """
+    if not settings.get("manual_confirm", False):
         return True
 
     answer = input("Answer this rollcall now? [y/N]: ").strip().lower()
     return answer == "y"
+
 
 def handle_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> list[bool]:
     """Process each rollcall entry: detect type, apply delays, and sign in.

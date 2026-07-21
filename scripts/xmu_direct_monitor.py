@@ -16,8 +16,13 @@ LOG_FILE = os.path.join(LOG_DIR, 'xmu-rollcall-monitor.log')
 RETENTION_DAYS = 7
 
 # Log cleanup: remove lines older than RETENTION_DAYS
-def _cleanup_old_logs():
-    """保留最近 RETENTION_DAYS 天的日志，其余删除。"""
+def _cleanup_old_logs() -> None:
+    """保留最近 RETENTION_DAYS 天的日志，其余删除。
+
+    Parses leading ``[YYYY-MM-DD HH:MM:SS]`` timestamps when present; lines
+    without a parseable stamp are kept. Rewrites the log only when something
+    was pruned.
+    """
     if not os.path.exists(LOG_FILE) or os.path.getsize(LOG_FILE) < 1024:
         return
     cutoff = time.time() - RETENTION_DAYS * 86400

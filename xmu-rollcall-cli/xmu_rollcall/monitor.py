@@ -61,7 +61,11 @@ def center_text(text: str, width: int | None = None) -> str:
     return ' ' * left_padding + text
 
 def print_banner() -> None:
-    """在终端打印程序启动横幅，包含版本号信息。"""
+    """在终端打印程序启动横幅，包含版本号信息。
+
+    Interactive TTYs get colored borders; plain stdout (pipes/cron logs)
+    receives uncolored text so log files stay readable.
+    """
     width = get_terminal_width()
     line = '=' * width
 
@@ -137,7 +141,12 @@ def get_colorful_text(text: str, color_offset: int = 0) -> str:
     ) + Colors.ENDC
 
 def print_footer_text(color_offset: int = 0) -> None:
-    """打印底部彩色文字"""
+    """打印底部彩色署名横幅。
+
+    Args:
+        color_offset: Palette shift for the per-character color cycle,
+            used by the dashboard animation loop.
+    """
     text = "XMU-Rollcall-Bot @ KrsMt"
     colored = get_colorful_text(text, color_offset)
     print(center_text(colored))

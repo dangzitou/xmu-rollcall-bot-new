@@ -36,6 +36,7 @@ def _load_hermes_send_message_tool() -> Callable[..., object]:
 
 @contextmanager
 def _temporary_env(overrides: dict[str, str]):
+    """Temporarily set env vars; restore previous values (or unset) on exit."""
     previous: dict[str, str | None] = {}
     try:
         for key, value in overrides.items():
