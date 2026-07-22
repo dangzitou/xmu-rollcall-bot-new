@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - CLI account-add profile fetch and session verification now use retry_request for transient network errors
 - `extract_rollcalls` uses safe field access so partial API payloads no longer raise KeyError
 - Number/radar delay helpers and manual-confirm gate use safe ``settings.get`` defaults
+- CLI rollcall/notification config prompts use ``.get`` defaults so partial configs cannot KeyError mid-prompt
 
 ### Changed
 - Ongoing code quality improvements (type hints, docstrings, PEP8 spacing)
@@ -19,3 +20,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - CLI profile fetch uses shared BASE_URL/HEADERS instead of monitor module aliases
 - Nested CLI config helpers and `utils.__getattr__` now declare return types
 - Expand thin banner/footer/docstrings; annotate direct-monitor log cleanup return type
+- Expand CLI command and nested-helper docstrings (config/start/refresh/switch and sub-actions)

@@ -21,9 +21,12 @@ from .config import (
     add_account, get_all_accounts, get_current_account, set_current_account,
     get_account_by_id, CONFIG_FILE, delete_account, perform_account_deletion,
     get_rollcall_settings, set_rollcall_settings, get_notification_settings,
-    set_notification_settings,
+    set_notification_settings, DEFAULT_ROLLCALL_SETTINGS,
 )
-from .notifications_config import DEFAULT_NOTIFICATION_TARGET_ENV
+from .notifications_config import (
+    DEFAULT_NOTIFICATION_TARGET_ENV,
+    default_notifications_config,
+)
 from .colors import Colors
 from .monitor import start_monitor
 from .utils import BASE_URL, HEADERS, retry_request
@@ -50,7 +53,11 @@ def cli(ctx: click.Context) -> None:
 
 @cli.command(help="配置账号、签到安全设置与通知投递")
 def config() -> None:
-    """配置账号：添加、删除账号"""
+    """Interactive account, rollcall-safety, and notification configuration.
+
+    Loads the on-disk config, then presents a loop to add/delete accounts
+    or adjust per-account rollcall delays and notification delivery.
+    """
     click.echo(f"\n{Colors.BOLD}{Colors.OKCYAN}=== XMU Rollcall Configuration ==={Colors.ENDC}\n")
 
     try:
@@ -60,7 +67,7 @@ def config() -> None:
         sys.exit(1)
 
     def show_accounts() -> None:
-        """显示账号列表"""
+        """Print configured accounts and mark the current one."""
         accounts = get_all_accounts(current_config)
         if accounts:
             click.echo(f"{Colors.BOLD}Existing accounts:{Colors.ENDC}")
@@ -73,7 +80,7 @@ def config() -> None:
             click.echo(f"{Colors.GRAY}No accounts configured.{Colors.ENDC}\n")
 
     def add_new_account() -> None:
-        """添加新账号"""
+        """Prompt for credentials, validate login, and persist a new account."""
         click.echo(f"{Colors.BOLD}Adding a new account...{Colors.ENDC}\n")
 
         # 输入新账号信息
@@ -124,7 +131,7 @@ def config() -> None:
             click.echo(f"{Colors.FAIL}✗ Error during login validation: {str(e)}{Colors.ENDC}")
 
     def delete_existing_account() -> None:
-        """删除账号"""
+        """Prompt for an account ID, confirm, then delete it and remap cookies."""
         accounts = get_all_accounts(current_config)
         if not accounts:
             click.echo(f"{Colors.WARNING}No accounts to delete.{Colors.ENDC}\n")
@@ -176,6 +183,11 @@ def config() -> None:
 
     # 主循环
     def configure_rollcall_settings() -> None:
+        """Interactively edit per-account rollcall delay and confirm settings.
+
+        Prompt defaults use ``settings.get`` with :data:`DEFAULT_ROLLCALL_SETTINGS`
+        so partial or hand-edited configs cannot raise KeyError mid-prompt.
+        """
         accounts = get_all_accounts(current_config)
         if not accounts:
             click.echo(f"{Colors.WARNING}No accounts configured.{Colors.ENDC}\n")
@@ -190,16 +202,30 @@ def config() -> None:
 
         account = get_account_by_id(current_config, int(selected_id))
         settings = get_rollcall_settings(account)
+        defaults = DEFAULT_ROLLCALL_SETTINGS
+
+        number_min = settings.get("number_delay_min", defaults["number_delay_min"])
+        number_max = settings.get("number_delay_max", defaults["number_delay_max"])
+        radar_min = settings.get("radar_delay_min", defaults["radar_delay_min"])
+        radar_max = settings.get("radar_delay_max", defaults["radar_delay_max"])
+        manual = settings.get("manual_confirm", defaults["manual_confirm"])
 
         click.echo(f"\n{Colors.BOLD}Rollcall safety settings:{Colors.ENDC}")
-        click.echo(f"  Number rollcall delay: {settings['number_delay_min']} - {settings['number_delay_max']} seconds")
-        click.echo(f"  Radar rollcall delay: {settings.get('radar_delay_min', 0)} - {settings.get('radar_delay_max', 0)} seconds")
-        click.echo(f"  Manual confirm before answering: {'yes' if settings['manual_confirm'] else 'no'}")
-        mode = settings.get('wait_before_answer_mode', 'none')
-        if mode == 'fixed':
-            click.echo(f"  Wait for classmates: fixed {settings.get('wait_before_answer_count_min', 0)} students")
-        elif mode == 'random':
-            click.echo(f"  Wait for classmates: random {settings.get('wait_before_answer_count_min', 0)}-{settings.get('wait_before_answer_count_max', 0)} students")
+        click.echo(f"  Number rollcall delay: {number_min} - {number_max} seconds")
+        click.echo(f"  Radar rollcall delay: {radar_min} - {radar_max} seconds")
+        click.echo(f"  Manual confirm before answering: {'yes' if manual else 'no'}")
+        mode = settings.get("wait_before_answer_mode", defaults["wait_before_answer_mode"])
+        if mode == "fixed":
+            click.echo(
+                f"  Wait for classmates: fixed "
+                f"{settings.get('wait_before_answer_count_min', defaults['wait_before_answer_count_min'])} students"
+            )
+        elif mode == "random":
+            click.echo(
+                f"  Wait for classmates: random "
+                f"{settings.get('wait_before_answer_count_min', defaults['wait_before_answer_count_min'])}-"
+                f"{settings.get('wait_before_answer_count_max', defaults['wait_before_answer_count_max'])} students"
+            )
         else:
             click.echo(f"  Wait for classmates: no wait")
         click.echo()
@@ -207,22 +233,22 @@ def config() -> None:
         delay_min = click.prompt(
             f"{Colors.BOLD}Minimum delay before number rollcall answer (seconds){Colors.ENDC}",
             type=int,
-            default=settings["number_delay_min"]
+            default=number_min,
         )
         delay_max = click.prompt(
             f"{Colors.BOLD}Maximum delay before number rollcall answer (seconds){Colors.ENDC}",
             type=int,
-            default=max(settings["number_delay_max"], delay_min)
+            default=max(number_max, delay_min),
         )
         radar_delay_min = click.prompt(
             f"{Colors.BOLD}Minimum delay before radar rollcall answer (seconds){Colors.ENDC}",
             type=int,
-            default=settings.get("radar_delay_min", 0)
+            default=radar_min,
         )
         radar_delay_max = click.prompt(
             f"{Colors.BOLD}Maximum delay before radar rollcall answer (seconds){Colors.ENDC}",
             type=int,
-            default=max(settings.get("radar_delay_max", 0), radar_delay_min)
+            default=max(radar_max, radar_delay_min),
         )
 
         # Wait before answer strategy
@@ -230,40 +256,44 @@ def config() -> None:
         click.echo(f"  1) No wait (answer immediately after delay)")
         click.echo(f"  2) Fixed - wait until N students have answered")
         click.echo(f"  3) Random - wait until a random number (0-N) of students have answered")
-        current_mode = settings.get('wait_before_answer_mode', 'none')
-        mode_default = {'none': '1', 'fixed': '2', 'random': '3'}.get(current_mode, '1')
+        current_mode = settings.get("wait_before_answer_mode", defaults["wait_before_answer_mode"])
+        mode_default = {"none": "1", "fixed": "2", "random": "3"}.get(current_mode, "1")
         wait_mode_choice = click.prompt(
             f"{Colors.BOLD}Choice{Colors.ENDC}",
-            type=click.Choice(['1', '2', '3'], case_sensitive=False),
-            default=mode_default
+            type=click.Choice(["1", "2", "3"], case_sensitive=False),
+            default=mode_default,
         )
-        mode_map = {'1': 'none', '2': 'fixed', '3': 'random'}
+        mode_map = {"1": "none", "2": "fixed", "3": "random"}
         wait_mode = mode_map[wait_mode_choice]
 
-        wait_count_min = settings.get('wait_before_answer_count_min', 0)
-        wait_count_max = settings.get('wait_before_answer_count_max', 0)
-        if wait_mode == 'fixed':
+        wait_count_min = settings.get(
+            "wait_before_answer_count_min", defaults["wait_before_answer_count_min"]
+        )
+        wait_count_max = settings.get(
+            "wait_before_answer_count_max", defaults["wait_before_answer_count_max"]
+        )
+        if wait_mode == "fixed":
             wait_count_min = click.prompt(
                 f"{Colors.BOLD}How many classmates to wait for{Colors.ENDC}",
                 type=int,
-                default=wait_count_min
+                default=wait_count_min,
             )
             wait_count_max = wait_count_min
-        elif wait_mode == 'random':
+        elif wait_mode == "random":
             wait_count_min = click.prompt(
                 f"{Colors.BOLD}Minimum classmates to wait for{Colors.ENDC}",
                 type=int,
-                default=wait_count_min
+                default=wait_count_min,
             )
             wait_count_max = click.prompt(
                 f"{Colors.BOLD}Maximum classmates to wait for{Colors.ENDC}",
                 type=int,
-                default=max(wait_count_max, wait_count_min)
+                default=max(wait_count_max, wait_count_min),
             )
 
         manual_confirm = click.confirm(
             f"{Colors.BOLD}Require manual confirmation before answering rollcalls?{Colors.ENDC}",
-            default=settings["manual_confirm"]
+            default=manual,
         )
 
         set_rollcall_settings(account, {
@@ -280,19 +310,42 @@ def config() -> None:
         updated = get_rollcall_settings(account)
 
         click.echo(f"\n{Colors.OKGREEN}Settings saved.{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Number rollcall delay: {updated['number_delay_min']} - {updated['number_delay_max']} seconds{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Radar rollcall delay: {updated['radar_delay_min']} - {updated['radar_delay_max']} seconds{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Manual confirm: {'yes' if updated['manual_confirm'] else 'no'}{Colors.ENDC}")
-        wmode = updated.get('wait_before_answer_mode', 'none')
-        if wmode == 'fixed':
-            click.echo(f"{Colors.GRAY}Wait for classmates: fixed {updated.get('wait_before_answer_count_min', 0)} students{Colors.ENDC}")
-        elif wmode == 'random':
-            click.echo(f"{Colors.GRAY}Wait for classmates: random {updated.get('wait_before_answer_count_min', 0)}-{updated.get('wait_before_answer_count_max', 0)} students{Colors.ENDC}")
+        click.echo(
+            f"{Colors.GRAY}Number rollcall delay: "
+            f"{updated.get('number_delay_min', defaults['number_delay_min'])} - "
+            f"{updated.get('number_delay_max', defaults['number_delay_max'])} seconds{Colors.ENDC}"
+        )
+        click.echo(
+            f"{Colors.GRAY}Radar rollcall delay: "
+            f"{updated.get('radar_delay_min', defaults['radar_delay_min'])} - "
+            f"{updated.get('radar_delay_max', defaults['radar_delay_max'])} seconds{Colors.ENDC}"
+        )
+        click.echo(
+            f"{Colors.GRAY}Manual confirm: "
+            f"{'yes' if updated.get('manual_confirm', defaults['manual_confirm']) else 'no'}{Colors.ENDC}"
+        )
+        wmode = updated.get("wait_before_answer_mode", defaults["wait_before_answer_mode"])
+        if wmode == "fixed":
+            click.echo(
+                f"{Colors.GRAY}Wait for classmates: fixed "
+                f"{updated.get('wait_before_answer_count_min', 0)} students{Colors.ENDC}"
+            )
+        elif wmode == "random":
+            click.echo(
+                f"{Colors.GRAY}Wait for classmates: random "
+                f"{updated.get('wait_before_answer_count_min', 0)}-"
+                f"{updated.get('wait_before_answer_count_max', 0)} students{Colors.ENDC}"
+            )
         else:
             click.echo(f"{Colors.GRAY}Wait for classmates: no wait{Colors.ENDC}")
         click.echo()
 
     def configure_notifications() -> None:
+        """Interactively edit per-account notification enablement and target.
+
+        Reads prompt defaults via ``.get`` against :func:`default_notifications_config`
+        so partial notification dicts cannot raise KeyError mid-prompt.
+        """
         accounts = get_all_accounts(current_config)
         if not accounts:
             click.echo(f"{Colors.WARNING}No accounts configured.{Colors.ENDC}\n")
@@ -307,34 +360,41 @@ def config() -> None:
 
         account = get_account_by_id(current_config, int(selected_id))
         settings = get_notification_settings(account)
-        target = settings["target"]
+        notif_defaults = default_notifications_config()
+        target = settings.get("target") or notif_defaults["target"]
+        target_type = target.get("type", notif_defaults["target"]["type"])
+        target_value_current = target.get("value", notif_defaults["target"]["value"])
+        enabled_current = settings.get("enabled", notif_defaults["enabled"])
+        notify_new_current = settings.get(
+            "notify_on_new_rollcall", notif_defaults["notify_on_new_rollcall"]
+        )
 
         click.echo(f"\n{Colors.BOLD}Notification settings:{Colors.ENDC}")
-        click.echo(f"  Enabled: {'yes' if settings['enabled'] else 'no'}")
-        click.echo(f"  Notify on new rollcall: {'yes' if settings['notify_on_new_rollcall'] else 'no'}")
-        click.echo(f"  Target mode: {target['type']}")
-        click.echo(f"  Target value: {target['value']}\n")
+        click.echo(f"  Enabled: {'yes' if enabled_current else 'no'}")
+        click.echo(f"  Notify on new rollcall: {'yes' if notify_new_current else 'no'}")
+        click.echo(f"  Target mode: {target_type}")
+        click.echo(f"  Target value: {target_value_current}\n")
 
         enabled = click.confirm(
             f"{Colors.BOLD}Enable notifications for this account?{Colors.ENDC}",
-            default=settings["enabled"]
+            default=enabled_current,
         )
         notify_on_new_rollcall = click.confirm(
             f"{Colors.BOLD}Send a message as soon as a new rollcall is detected?{Colors.ENDC}",
-            default=settings["notify_on_new_rollcall"]
+            default=notify_new_current,
         )
         target_mode = click.prompt(
             f"{Colors.BOLD}Notification target mode (env/fixed){Colors.ENDC}",
-            type=click.Choice(['env', 'fixed'], case_sensitive=False),
-            default=target["type"]
+            type=click.Choice(["env", "fixed"], case_sensitive=False),
+            default=target_type,
         ).lower()
-        default_target_value = target["value"] if target_mode == target["type"] else (
-            DEFAULT_NOTIFICATION_TARGET_ENV if target_mode == 'env' else ''
+        default_target_value = target_value_current if target_mode == target_type else (
+            DEFAULT_NOTIFICATION_TARGET_ENV if target_mode == "env" else ""
         )
         target_value = click.prompt(
             f"{Colors.BOLD}Notification target {'environment variable name' if target_mode == 'env' else 'direct target value'}{Colors.ENDC}",
             default=default_target_value,
-            show_default=True
+            show_default=True,
         )
 
         set_notification_settings(account, {
@@ -347,12 +407,25 @@ def config() -> None:
         })
         save_config(current_config)
         updated = get_notification_settings(account)
+        updated_target = updated.get("target") or notif_defaults["target"]
 
         click.echo(f"\n{Colors.OKGREEN}Notification settings saved.{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Enabled: {'yes' if updated['enabled'] else 'no'}{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Notify on new rollcall: {'yes' if updated['notify_on_new_rollcall'] else 'no'}{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Target mode: {updated['target']['type']}{Colors.ENDC}")
-        click.echo(f"{Colors.GRAY}Target value: {updated['target']['value']}{Colors.ENDC}\n")
+        click.echo(
+            f"{Colors.GRAY}Enabled: "
+            f"{'yes' if updated.get('enabled', notif_defaults['enabled']) else 'no'}{Colors.ENDC}"
+        )
+        click.echo(
+            f"{Colors.GRAY}Notify on new rollcall: "
+            f"{'yes' if updated.get('notify_on_new_rollcall', notif_defaults['notify_on_new_rollcall']) else 'no'}{Colors.ENDC}"
+        )
+        click.echo(
+            f"{Colors.GRAY}Target mode: "
+            f"{updated_target.get('type', notif_defaults['target']['type'])}{Colors.ENDC}"
+        )
+        click.echo(
+            f"{Colors.GRAY}Target value: "
+            f"{updated_target.get('value', notif_defaults['target']['value'])}{Colors.ENDC}\n"
+        )
 
     while True:
         show_accounts()
@@ -395,7 +468,7 @@ def config() -> None:
 
 @cli.command()
 def start() -> None:
-    """启动签到监控"""
+    """Load config, require a complete current account, then start monitoring."""
     # 加载配置
     try:
         config_data = load_config()
@@ -425,7 +498,7 @@ def start() -> None:
 
 @cli.command()
 def refresh() -> None:
-    """清除当前账号的登录缓存"""
+    """Delete the current account's cached cookies so the next start re-logins."""
     try:
         config_data = load_config()
     except Exception as e:
@@ -457,7 +530,7 @@ def refresh() -> None:
 
 @cli.command()
 def switch() -> None:
-    """切换当前使用的账号"""
+    """List accounts and set which one is active for start/refresh."""
     click.echo(f"\n{Colors.BOLD}{Colors.OKCYAN}=== Switch Account ==={Colors.ENDC}\n")
 
     try:
