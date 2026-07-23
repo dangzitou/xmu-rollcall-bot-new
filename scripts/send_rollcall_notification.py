@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -35,7 +35,7 @@ def _load_hermes_send_message_tool() -> Callable[..., object]:
 
 
 @contextmanager
-def _temporary_env(overrides: dict[str, str]):
+def _temporary_env(overrides: dict[str, str]) -> Iterator[None]:
     """Temporarily set env vars; restore previous values (or unset) on exit."""
     previous: dict[str, str | None] = {}
     try:

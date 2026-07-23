@@ -66,7 +66,10 @@ def get_notification_target(notifications_config: dict | None) -> NotificationTa
         :meth:`~NotificationTarget.resolve`.
     """
     config = normalize_notifications_config(notifications_config)
-    target = config["target"]
-    if target["type"] == "fixed":
-        return NotificationTarget.from_value(target["value"])
-    return NotificationTarget.from_env_name(target["value"])
+    # Prefer .get even after normalize so hand-edited partial configs stay safe.
+    target = config.get("target") or {}
+    target_type = target.get("type", "env")
+    target_value = str(target.get("value", DEFAULT_NOTIFICATION_TARGET_ENV)).strip() or DEFAULT_NOTIFICATION_TARGET_ENV
+    if target_type == "fixed":
+        return NotificationTarget.from_value(target_value)
+    return NotificationTarget.from_env_name(target_value)

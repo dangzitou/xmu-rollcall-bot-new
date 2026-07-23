@@ -214,6 +214,11 @@ def confirm_before_answer(settings: dict) -> bool:
 def handle_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> list[bool]:
     """Process each rollcall entry: detect type, apply delays, and sign in.
 
+    Uses defensive ``.get`` access on normalised rollcall dicts so partial
+    API payloads (fields already filled with ``None`` by
+    :func:`extract_rollcalls`) do not raise ``KeyError`` during display or
+    type detection.
+
     Args:
         data: Raw API response containing a ``rollcalls`` list.
         session: Authenticated HTTP session.
@@ -230,12 +235,20 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
         print(time.strftime("%H:%M:%S", time.localtime()), f"New rollcall(s) found!\n")
         for i in range(count):
             rc = rollcalls[i]
-            print(f"{i+1} of {count}:")
-            print(f"Course name: {rc['course_title']}, rollcall created by {rc['department_name']} {rc['created_by_name']}.")
+            course = rc.get('course_title') or 'Unknown course'
+            department = rc.get('department_name') or ''
+            teacher = rc.get('created_by_name') or 'Unknown'
+            rollcall_id = rc.get('rollcall_id')
+            is_radar = bool(rc.get('is_radar'))
+            is_number = bool(rc.get('is_number'))
+            status = rc.get('status')
 
-            if rc['is_radar']:
+            print(f"{i+1} of {count}:")
+            print(f"Course name: {course}, rollcall created by {department} {teacher}.")
+
+            if is_radar:
                 rollcall_type = "Radar rollcall"
-            elif rc['is_number']:
+            elif is_number:
                 rollcall_type = "Number rollcall"
             else:
                 rollcall_type = "QRcode rollcall"
@@ -248,21 +261,21 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
                 except Exception as e:
                     print(f"Notification error: {e}")
 
-            already_signed = rc['status'] in _SIGNED_STATUSES
+            already_signed = status in _SIGNED_STATUSES
             if already_signed:
                 print("Already answered.")
                 answer_status[i] = True
-            elif rc['is_number'] and not rc['is_radar']:
+            elif is_number and not is_radar:
                 wait_before_number_answer(settings)
-                wait_for_classmates(session, rc['rollcall_id'], settings)
-                if send_code(session, rc['rollcall_id']):
+                wait_for_classmates(session, rollcall_id, settings)
+                if send_code(session, rollcall_id):
                     answer_status[i] = True
                 else:
                     print("Answering failed.")
-            elif rc['is_radar']:
+            elif is_radar:
                 wait_before_radar_answer(settings)
-                wait_for_classmates(session, rc['rollcall_id'], settings)
-                if send_radar(session, rc['rollcall_id']):
+                wait_for_classmates(session, rollcall_id, settings)
+                if send_radar(session, rollcall_id):
                     answer_status[i] = True
                 else:
                     print("Answering failed.")

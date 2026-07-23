@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Fixed
+- Monitor start and direct monitor use safe account credential access with an early clear error on missing username/password
+- ``handle_rollcalls`` uses defensive ``.get`` for display/type fields after extract normalisation
+- ``get_notification_target`` resolves nested target fields via ``.get`` for partial hand-edited configs
 - Direct monitor now checks notification helper exit code and timeouts instead of always logging success
 - Wrap student_rollcalls fetches with retry_request (direct monitor + signed-count poll)
 - CLI account-add profile fetch and session verification now use retry_request for transient network errors
@@ -15,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - CLI rollcall/notification config prompts use ``.get`` defaults so partial configs cannot KeyError mid-prompt
 
 ### Changed
+- Annotate notification helper ``_temporary_env`` return type; document proxy Session patch
 - Ongoing code quality improvements (type hints, docstrings, PEP8 spacing)
 - Direct monitor uses shared BASE_URL/HEADERS for student_rollcalls instead of a hard-coded host
 - CLI profile fetch uses shared BASE_URL/HEADERS instead of monitor module aliases

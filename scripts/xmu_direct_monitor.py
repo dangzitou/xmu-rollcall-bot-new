@@ -76,9 +76,16 @@ disable_system_proxies()
 # Config
 from xmu_rollcall.config import load_config, get_current_account, get_cookies_path
 cfg = load_config()
-acc = get_current_account(cfg)
-cp = get_cookies_path(acc['id'])
-p(f"Account: {acc['name']} (ID: {acc['id']})")
+acc = get_current_account(cfg) or {}
+account_id = acc.get('id', 1)
+account_name = acc.get('name') or acc.get('username') or '(unknown)'
+username = (acc.get('username') or '').strip()
+password = acc.get('password') or ''
+if not username or not password:
+    pe("Missing username/password in current account config")
+    sys.exit(1)
+cp = get_cookies_path(account_id)
+p(f"Account: {account_name} (ID: {account_id})")
 
 # Login / restore session
 session = None
@@ -102,7 +109,7 @@ if not session:
         p("Logging in...")
         t0 = time.time()
         session = retry_request(
-            lambda: login_fn(type=3, username=acc['username'], password=acc['password']),
+            lambda: login_fn(type=3, username=username, password=password),
             max_attempts=3, delay=5, label="login",
         )
         if session:
@@ -116,7 +123,7 @@ if not session:
         pe("Login error", e)
         sys.exit(1)
 
-p(f"Welcome, {acc['name']}")
+p(f"Welcome, {account_name}")
 p("Starting monitoring...")
 
 from xmu_rollcall.utils import BASE_URL, HEADERS

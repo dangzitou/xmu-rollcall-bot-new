@@ -21,6 +21,7 @@ def disable_system_proxies() -> None:
     original_init = requests.sessions.Session.__init__
 
     def patched_init(self: Any, *args: Any, **kwargs: Any) -> None:
+        """Session constructor wrapper that forces trust_env=False."""
         original_init(self, *args, **kwargs)
         self.trust_env = False
         self.proxies = {}

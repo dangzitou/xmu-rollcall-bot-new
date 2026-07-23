@@ -305,14 +305,20 @@ def start_monitor(account: dict) -> None:
     初始化登录会话后，以轮询方式持续查询点名 API。当检测到新的
     点名事件时自动触发通知流程，并在终端仪表板上实时刷新状态。
 
+    Reads credentials via safe ``dict.get`` access so a partial account
+    dict surfaces a clear error instead of a mid-start ``KeyError``.
+
     Args:
         account: 账户配置字典，必须包含 ``username``、``password``，
             可选 ``id``、``name`` 等字段。
     """
-    USERNAME = account['username']
-    PASSWORD = account['password']
+    USERNAME = (account.get('username') or '').strip()
+    PASSWORD = account.get('password') or ''
     ACCOUNT_ID = account.get('id', 1)
-    ACCOUNT_NAME = account.get('name', '')
+    ACCOUNT_NAME = account.get('name') or USERNAME or ''
+    if not USERNAME or not PASSWORD:
+        print(f"{Colors.FAIL}Missing username/password in account config; aborting monitor start.{Colors.ENDC}")
+        sys.exit(1)
     # LATITUDE = account.get('latitude', 0)
     # LONGITUDE = account.get('longitude', 0)
 
