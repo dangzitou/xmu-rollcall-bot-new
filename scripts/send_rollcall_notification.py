@@ -22,6 +22,11 @@ HERMES_HOME = Path.home() / ".hermes"
 
 
 def _load_hermes_send_message_tool() -> Callable[..., object]:
+    """Load Hermes ``send_message_tool`` after injecting repo path and dotenv.
+
+    Returns:
+        The callable ``send_message_tool`` from hermes tools.
+    """
     if str(HERMES_REPO) not in sys.path:
         sys.path.insert(0, str(HERMES_REPO))
 
@@ -52,6 +57,15 @@ def _temporary_env(overrides: dict[str, str]) -> Iterator[None]:
 
 
 def _normalize_target_for_send(target: str) -> tuple[str, dict[str, str]]:
+    """Map a notification target string to Hermes send target + env overrides.
+
+    Args:
+        target: e.g. ``qqbot:<channel_id>`` or a bare platform/target string.
+
+    Returns:
+        ``(send_target, env_overrides)`` where env_overrides may set
+        ``QQBOT_HOME_CHANNEL`` for explicit qqbot channel IDs.
+    """
     platform, sep, rest = target.partition(":")
     platform = platform.strip().lower()
     explicit_id = rest.strip() if sep else ""
@@ -63,6 +77,13 @@ def _normalize_target_for_send(target: str) -> tuple[str, dict[str, str]]:
 
 
 def main() -> int:
+    """CLI entry: send one rollcall notification from a JSON argv payload.
+
+    Expects a single JSON argument with non-empty ``target`` and ``message``.
+
+    Returns:
+        Process exit code (0 success, 1 send error, 2 usage/payload error).
+    """
     if len(sys.argv) != 2:
         print("Expected exactly one JSON payload argument", file=sys.stderr)
         return 2

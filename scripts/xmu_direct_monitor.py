@@ -205,7 +205,10 @@ try:
                         student_answered_at = None
                         try:
                             from xmu_rollcall.verify import find_number_code
-                            code_url = f"{BASE_URL}/api/rollcall/{rc['rollcall_id']}/student_rollcalls"
+                            rollcall_id = rc.get('rollcall_id')
+                            if not rollcall_id:
+                                raise ValueError('missing rollcall_id')
+                            code_url = f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls"
                             code_resp = retry_request(
                                 lambda: session.get(code_url, headers=HEADERS, timeout=10),
                                 max_attempts=2,

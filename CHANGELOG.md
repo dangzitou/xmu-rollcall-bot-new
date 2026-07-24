@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Fixed
+- Direct monitor uses safe ``rc.get('rollcall_id')`` before building student_rollcalls URL so partial rollcall dicts no longer KeyError mid-notify
 - Monitor start and direct monitor use safe account credential access with an early clear error on missing username/password
 - ``handle_rollcalls`` uses defensive ``.get`` for display/type fields after extract normalisation
 - ``get_notification_target`` resolves nested target fields via ``.get`` for partial hand-edited configs
@@ -18,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - CLI rollcall/notification config prompts use ``.get`` defaults so partial configs cannot KeyError mid-prompt
 
 ### Changed
+- Expand docstrings on notification helper load/normalize/main entrypoints
 - Annotate notification helper ``_temporary_env`` return type; document proxy Session patch
 - Ongoing code quality improvements (type hints, docstrings, PEP8 spacing)
 - Direct monitor uses shared BASE_URL/HEADERS for student_rollcalls instead of a hard-coded host
