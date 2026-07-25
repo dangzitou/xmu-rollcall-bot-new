@@ -307,6 +307,8 @@ def start_monitor(account: dict) -> None:
 
     Reads credentials via safe ``dict.get`` access so a partial account
     dict surfaces a clear error instead of a mid-start ``KeyError``.
+    Poll responses also use ``temp_data.get('rollcalls', [])`` so a
+    partial or unexpected API payload cannot KeyError mid-loop.
 
     Args:
         account: 账户配置字典，必须包含 ``username``、``password``，
@@ -423,10 +425,10 @@ def start_monitor(account: dict) -> None:
 
                     if temp_data != data:
                         temp_data = data
-                        if len(temp_data['rollcalls']) > 0:
+                        if len(temp_data.get('rollcalls', [])) > 0:
                             # Filter out already-notified rollcalls (same id + status)
                             new_rollcalls = [
-                                rc for rc in temp_data['rollcalls']
+                                rc for rc in temp_data.get('rollcalls', [])
                                 if (rc.get('rollcall_id'), rc.get('status')) not in notified_rollcall_ids
                             ]
                             if not new_rollcalls:

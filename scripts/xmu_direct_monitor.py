@@ -181,7 +181,7 @@ try:
             if len(temp_data.get('rollcalls', [])) > 0:
                 detect_time = time.time()
                 detect_ts = time.strftime('%H:%M:%S', time.localtime(detect_time))
-                p(f"NEW ROLLCALL DETECTED at {detect_ts} ({len(temp_data['rollcalls'])} items)")
+                p(f"NEW ROLLCALL DETECTED at {detect_ts} ({len(temp_data.get('rollcalls', []))} items)")
                 try:
                     from xmu_rollcall.rollcall_handler import process_rollcalls
                     temp_data = process_rollcalls(temp_data, session, acc)

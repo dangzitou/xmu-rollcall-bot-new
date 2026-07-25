@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Fixed
+- Monitor loop and direct monitor use ``temp_data.get('rollcalls', [])`` so partial poll payloads no longer KeyError when the list key is missing
 - Direct monitor uses safe ``rc.get('rollcall_id')`` before building student_rollcalls URL so partial rollcall dicts no longer KeyError mid-notify
 - Monitor start and direct monitor use safe account credential access with an early clear error on missing username/password
 - ``handle_rollcalls`` uses defensive ``.get`` for display/type fields after extract normalisation
