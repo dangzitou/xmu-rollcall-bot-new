@@ -53,8 +53,13 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | No
             label="signed_count",
         )
         if resp.status_code == 200:
-            students = resp.json().get("student_rollcalls", [])
-            return sum(1 for s in students if s.get("updated_at"))
+            payload = resp.json()
+            if not isinstance(payload, dict):
+                return None
+            students = payload.get("student_rollcalls", [])
+            if not isinstance(students, list):
+                return None
+            return sum(1 for s in students if isinstance(s, dict) and s.get("updated_at"))
     except Exception:
         pass
     return None
@@ -122,7 +127,10 @@ def process_rollcalls(data: dict, session: requests.Session, account: dict | Non
     # 只有在真正失败（send_code/send_radar 返回 False）时才返回空数据。
     has_real_failure = False
     for i, rc in enumerate(rollcalls):
-        if not result[i] and not (rc.get('is_radar') is False and rc.get('is_number') is False):
+        # Guard index if handle_rollcalls ever returns a shorter list.
+        answered = result[i] if i < len(result) else False
+        is_qrcode = (rc.get('is_radar') is False and rc.get('is_number') is False)
+        if not answered and not is_qrcode:
             has_real_failure = True
             break
 
@@ -217,7 +225,8 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
     Uses defensive ``.get`` access on normalised rollcall dicts so partial
     API payloads (fields already filled with ``None`` by
     :func:`extract_rollcalls`) do not raise ``KeyError`` during display or
-    type detection.
+    type detection. Auto-answer paths also skip entries that lack a
+    ``rollcall_id`` instead of calling the API with ``None``.
 
     Args:
         data: Raw API response containing a ``rollcalls`` list.
@@ -265,6 +274,9 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
             if already_signed:
                 print("Already answered.")
                 answer_status[i] = True
+            elif rollcall_id is None and (is_number or is_radar):
+                # Partial payloads may omit rollcall_id after extract_rollcalls.
+                print("Skipping auto-answer: missing rollcall_id on payload.")
             elif is_number and not is_radar:
                 wait_before_number_answer(settings)
                 wait_for_classmates(session, rollcall_id, settings)

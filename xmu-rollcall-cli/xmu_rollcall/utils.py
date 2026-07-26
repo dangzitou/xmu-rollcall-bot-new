@@ -37,7 +37,6 @@ def retry_request(fn: Callable[[], T], max_attempts: int = 3, delay: float = 2, 
     raise last_exc
 
 
-
 def format_duration(seconds: float) -> str:
     """Format a duration in seconds into a human-readable Chinese string.
 
@@ -92,6 +91,7 @@ HEADERS: dict[str, str] = {
 }
 """Default HTTP headers mimicking a standard Chrome browser."""
 
+
 def clear_screen() -> None:
     """Clear the terminal screen.
 
@@ -104,6 +104,7 @@ def clear_screen() -> None:
         os.system('cls')
     else:
         os.system('clear')
+
 
 def save_session(sess: requests.Session, path: str) -> None:
     """Persist a session's cookies to a JSON file.
@@ -118,6 +119,7 @@ def save_session(sess: requests.Session, path: str) -> None:
             json.dump(cj_dict, f)
     except Exception:
         pass
+
 
 def load_session(sess: requests.Session, path: str) -> bool:
     """Restore a session's cookies from a previously saved JSON file.
@@ -136,6 +138,7 @@ def load_session(sess: requests.Session, path: str) -> bool:
         return True
     except Exception:
         return False
+
 
 def verify_session(sess: requests.Session) -> dict[str, Any]:
     """Check whether a session is still authenticated.
