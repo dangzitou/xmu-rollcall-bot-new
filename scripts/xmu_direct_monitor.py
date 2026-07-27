@@ -3,6 +3,9 @@
 
 Manages the rollcall monitoring process with heartbeat logging,
 log rotation, and real-time dashboard display.
+
+Poll and student_rollcalls responses are shape-checked (dict/list) so
+non-JSON-object payloads cannot AttributeError mid-loop or mid-notify.
 """
 
 import sys, os, time, json, traceback, subprocess
@@ -151,6 +154,10 @@ try:
             )
             resp.raise_for_status()
             data = resp.json()
+            # Unusable JSON shape (list/str/None) must not AttributeError on .get
+            if not isinstance(data, dict):
+                pe(f"Poll payload is not a dict ({type(data).__name__}); treating as empty")
+                data = {}
             query_count += 1
             if query_count == 1:
                 p(f"First query OK: {len(data.get('rollcalls',[]))} rollcalls")
@@ -217,9 +224,20 @@ try:
                             )
                             if code_resp.status_code == 200:
                                 code_data = code_resp.json()
+                                # find_number_code already tolerates non-dicts; .get does not
+                                if not isinstance(code_data, dict):
+                                    raise ValueError(
+                                        f"student_rollcalls payload is not a dict "
+                                        f"({type(code_data).__name__})"
+                                    )
                                 number_code = find_number_code(code_data)
                                 # Find current student's answer time
-                                for sc in code_data.get('student_rollcalls', []):
+                                students = code_data.get('student_rollcalls', [])
+                                if not isinstance(students, list):
+                                    students = []
+                                for sc in students:
+                                    if not isinstance(sc, dict):
+                                        continue
                                     if sc.get('user_no') == acc.get('username'):
                                         student_answered_at = sc.get('updated_at')
                                         break
