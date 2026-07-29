@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Fixed
+- Harden package monitor poll ``resp.json()`` against non-dict/unparseable payloads and non-dict rollcall list items
+- Harden ``send_radar`` probe/trilateration JSON parsing so non-dict bodies no longer AttributeError on ``.get("distance")``
 - Harden direct-monitor poll and student_rollcalls ``resp.json()`` against non-dict payloads (treat poll as empty; skip number_code path on bad shape)
 - Skip auto-answer when a rollcall entry is missing ``rollcall_id`` so number/radar paths do not hit the API with ``None``
 - Harden ``_fetch_signed_count`` against non-dict JSON and non-list ``student_rollcalls`` payloads

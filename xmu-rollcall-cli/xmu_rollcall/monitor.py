@@ -402,10 +402,18 @@ def start_monitor(account: dict) -> None:
                 elapsed = int(current_time - start_time)
                 if elapsed > _last_query_time:
                     _last_query_time = elapsed
-                    data = retry_request(
+                    poll_resp = retry_request(
                         lambda: session.get(rollcalls_url, headers=HEADERS, timeout=30),
                         max_attempts=3, delay=2, label="poll",
-                    ).json()
+                    )
+                    try:
+                        data = poll_resp.json()
+                    except ValueError:
+                        data = {}
+                    # Keep the monitor loop alive on unusable shapes (list/str/None).
+                    # Empty dict ≈ no new rollcalls, not a signed-count failure.
+                    if not isinstance(data, dict):
+                        data = {}
                     query_count += 1
 
                     local_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -425,10 +433,15 @@ def start_monitor(account: dict) -> None:
 
                     if temp_data != data:
                         temp_data = data
-                        if len(temp_data.get('rollcalls', [])) > 0:
+                        raw_rollcalls = temp_data.get('rollcalls', [])
+                        if not isinstance(raw_rollcalls, list):
+                            raw_rollcalls = []
+                        # Only dict entries are processable; skip malformed list items.
+                        rollcalls = [rc for rc in raw_rollcalls if isinstance(rc, dict)]
+                        if len(rollcalls) > 0:
                             # Filter out already-notified rollcalls (same id + status)
                             new_rollcalls = [
-                                rc for rc in temp_data.get('rollcalls', [])
+                                rc for rc in rollcalls
                                 if (rc.get('rollcall_id'), rc.get('status')) not in notified_rollcall_ids
                             ]
                             if not new_rollcalls:

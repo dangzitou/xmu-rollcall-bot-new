@@ -115,6 +115,9 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
     uses the reported distances to trilaterate the actual sign-in
     location and retries with the computed coordinates.
 
+    Probe JSON bodies are shape-checked: non-dict or unparseable
+    responses are treated as missing distance info instead of raising.
+
     Args:
         in_session: Authenticated requests session with valid cookies.
         rollcall_id: The rollcall event ID to answer.
@@ -144,19 +147,31 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
         lambda: in_session.put(url, json=payload(lat_1, lon_1), headers=HEADERS, timeout=15),
         max_attempts=3, delay=2, label="radar_1",
     )
-    data_1 = res_1.json()
-
     if res_1.status_code == 200:
         return True
+    try:
+        raw_1 = res_1.json()
+    except ValueError as e:
+        print(f"Radar probe 1 returned unparseable JSON: {e}")
+        raw_1 = None
+    data_1 = raw_1 if isinstance(raw_1, dict) else {}
+    if raw_1 is not None and not isinstance(raw_1, dict):
+        print(f"Radar probe 1 payload is not a dict (got {type(raw_1).__name__}); ignoring distance.")
 
     res_2 = retry_request(
         lambda: in_session.put(url, json=payload(lat_2, lon_2), headers=HEADERS, timeout=15),
         max_attempts=3, delay=2, label="radar_2",
     )
-    data_2 = res_2.json()
-
     if res_2.status_code == 200:
         return True
+    try:
+        raw_2 = res_2.json()
+    except ValueError as e:
+        print(f"Radar probe 2 returned unparseable JSON: {e}")
+        raw_2 = None
+    data_2 = raw_2 if isinstance(raw_2, dict) else {}
+    if raw_2 is not None and not isinstance(raw_2, dict):
+        print(f"Radar probe 2 payload is not a dict (got {type(raw_2).__name__}); ignoring distance.")
 
     distance_1 = data_1.get("distance")
     distance_2 = data_2.get("distance")
@@ -231,7 +246,11 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
         )
         if res_3.status_code == 200:
             return True
-        print(f"Radar trilateration point 1 rejected: {res_3.json()}")
+        try:
+            rej_1 = res_3.json()
+        except ValueError:
+            rej_1 = res_3.text[:200]
+        print(f"Radar trilateration point 1 rejected: {rej_1}")
     except requests.RequestException as e:
         print(f"Radar trilateration point 1 request failed: {e}")
 
@@ -242,7 +261,11 @@ def send_radar(in_session: requests.Session, rollcall_id: int) -> bool:
         )
         if res_4.status_code == 200:
             return True
-        print(f"Radar trilateration point 2 rejected: {res_4.json()}")
+        try:
+            rej_2 = res_4.json()
+        except ValueError:
+            rej_2 = res_4.text[:200]
+        print(f"Radar trilateration point 2 rejected: {rej_2}")
     except requests.RequestException as e:
         print(f"Radar trilateration point 2 request failed: {e}")
 
