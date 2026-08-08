@@ -79,6 +79,16 @@ def send_code(in_session: requests.Session, rollcall_id: int) -> bool:
         print(f"Failed to parse number code API response: {e}\nTime: {t01 - t00:.2f} s.")
         return False
 
+    # find_number_code tolerates non-dicts, but log the bad shape explicitly
+    # so operators can tell parse success from empty traversal.
+    if not isinstance(code_data, (dict, list)):
+        t01 = time.time()
+        print(
+            f"Failed to get number code. Unexpected JSON shape "
+            f"({type(code_data).__name__}).\nTime: {t01 - t00:.2f} s."
+        )
+        return False
+
     number_code = find_number_code(code_data)
     if not number_code:
         t01 = time.time()

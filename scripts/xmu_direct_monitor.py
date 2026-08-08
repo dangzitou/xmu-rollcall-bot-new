@@ -6,6 +6,8 @@ log rotation, and real-time dashboard display.
 
 Poll and student_rollcalls responses are shape-checked (dict/list) so
 non-JSON-object payloads cannot AttributeError mid-loop or mid-notify.
+Poll ``rollcalls`` is normalised to a list of dicts (non-list → empty;
+non-dict items dropped) before process/notify consumers run.
 """
 
 import sys, os, time, json, traceback, subprocess
@@ -158,9 +160,24 @@ try:
             if not isinstance(data, dict):
                 pe(f"Poll payload is not a dict ({type(data).__name__}); treating as empty")
                 data = {}
+            raw_rollcalls = data.get('rollcalls', [])
+            if not isinstance(raw_rollcalls, list):
+                pe(
+                    f"Poll rollcalls is not a list ({type(raw_rollcalls).__name__}); "
+                    f"treating as empty"
+                )
+                raw_rollcalls = []
+            # Only dict entries are processable; drop malformed list items early.
+            rollcalls = [rc for rc in raw_rollcalls if isinstance(rc, dict)]
+            if len(rollcalls) != len(raw_rollcalls):
+                pe(
+                    f"Dropped {len(raw_rollcalls) - len(rollcalls)} non-dict "
+                    f"rollcall list item(s) from poll payload"
+                )
+            data = {**data, 'rollcalls': rollcalls}
             query_count += 1
             if query_count == 1:
-                p(f"First query OK: {len(data.get('rollcalls',[]))} rollcalls")
+                p(f"First query OK: {len(rollcalls)} rollcalls")
         except Exception as e:
             if query_count == 0:
                 pe(f"First query failed", e)
@@ -185,16 +202,25 @@ try:
         # Check new rollcalls
         if temp_data != data:
             temp_data = data
-            if len(temp_data.get('rollcalls', [])) > 0:
+            # data['rollcalls'] already list-of-dicts from poll harden above
+            current_rollcalls = temp_data.get('rollcalls') or []
+            if not isinstance(current_rollcalls, list):
+                current_rollcalls = []
+            if len(current_rollcalls) > 0:
                 detect_time = time.time()
                 detect_ts = time.strftime('%H:%M:%S', time.localtime(detect_time))
-                p(f"NEW ROLLCALL DETECTED at {detect_ts} ({len(temp_data.get('rollcalls', []))} items)")
+                p(f"NEW ROLLCALL DETECTED at {detect_ts} ({len(current_rollcalls)} items)")
                 try:
                     from xmu_rollcall.rollcall_handler import process_rollcalls
                     temp_data = process_rollcalls(temp_data, session, acc)
 
                     # Send QQ notification
-                    for rc in temp_data.get('rollcalls', []):
+                    processed = temp_data.get('rollcalls') or []
+                    if not isinstance(processed, list):
+                        processed = []
+                    for rc in processed:
+                        if not isinstance(rc, dict):
+                            continue
                         cname = rc.get('course_title', rc.get('course_name', '未知课程'))
                         teacher = rc.get('created_by_name', '未知教师')
                         dept = rc.get('department_name', '')

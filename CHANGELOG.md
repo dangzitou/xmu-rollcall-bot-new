@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Fixed
+- Normalise direct-monitor poll ``rollcalls`` to a list of dicts (non-list → empty; drop non-dict items) before process/notify
+- Reject non-dict/non-list number-code API bodies in ``send_code`` before traversal
 - Harden package monitor poll ``resp.json()`` against non-dict/unparseable payloads and non-dict rollcall list items
 - Harden ``send_radar`` probe/trilateration JSON parsing so non-dict bodies no longer AttributeError on ``.get("distance")``
 - Harden direct-monitor poll and student_rollcalls ``resp.json()`` against non-dict payloads (treat poll as empty; skip number_code path on bad shape)
