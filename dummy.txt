@@ -1,1 +1,1 @@
-Daily maintenance: ensure green dot on contribution graph
+Updated README for daily cron maintenance
