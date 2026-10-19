@@ -351,14 +351,22 @@ try:
                         )
                         sender = os.path.join(CLI_ROOT, 'scripts', 'send_rollcall_notification.py')
                         payload = json.dumps({"target": notify_target, "message": msg})
-                        # 通知脚本 import dotenv 依赖 hermes venv；systemd 服务用的是
-                        # /usr/bin/python3（无 dotenv），必须显式指定 venv 解释器
-                        notify_python = os.environ.get('XMU_NOTIFY_PYTHON') or str(
-                            Path.home() / '.hermes' / 'hermes-agent' / 'venv' / 'bin' / 'python3'
-                        )
+                        # The notifier imports python-dotenv, which only exists in
+                        # the Hermes venv. systemd pins XMU_NOTIFY_PYTHON; falling
+                        # back to sys.executable would silently disable every
+                        # notification, so fail loudly instead.
+                        notify_python = os.environ.get('XMU_NOTIFY_PYTHON')
+                        if not notify_python:
+                            notify_python = str(
+                                Path.home() / '.hermes' / 'hermes-agent' / 'venv' / 'bin' / 'python3'
+                            )
                         if not os.path.exists(notify_python):
-                            notify_python = sys.executable
+                            pe(f"Notify interpreter missing: {notify_python} — "
+                               "set XMU_NOTIFY_PYTHON to a python with python-dotenv")
+                            notify_python = None
                         try:
+                            if notify_python is None:
+                                raise RuntimeError('no usable notify interpreter')
                             completed = subprocess.run(
                                 [notify_python, sender, payload],
                                 capture_output=True, text=True, timeout=30
