@@ -11,6 +11,7 @@ non-dict items dropped) before process/notify consumers run.
 """
 
 import sys, os, time, json, traceback, subprocess
+from pathlib import Path
 
 CLI_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(CLI_ROOT, 'xmu-rollcall-cli'))
@@ -232,33 +233,71 @@ try:
                             rtype = 'QRcode rollcall'
                         status = rc.get('status', '已处理')
 
-                        # Fetch student_rollcalls for number_code + answer time
+                        # Fetch number_code + answer time via the timetable API.
+                        # The legacy /api/rollcall/{id}/student_rollcalls endpoint
+                        # no longer exposes number_code, so we reuse the same
+                        # resolution path as send_code: rollcall detail first,
+                        # then /api/timetable_rollcalls for that course/date.
                         from datetime import datetime, timezone, timedelta
                         number_code = None
                         student_answered_at = None
                         try:
-                            from xmu_rollcall.verify import find_number_code
+                            from xmu_rollcall.verify import get_rollcall_detail
                             rollcall_id = rc.get('rollcall_id')
                             if not rollcall_id:
                                 raise ValueError('missing rollcall_id')
-                            code_url = f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls"
-                            code_resp = retry_request(
-                                lambda: session.get(code_url, headers=HEADERS, timeout=10),
-                                max_attempts=2,
-                                delay=1,
-                                label="student_rollcalls",
+
+                            detail = get_rollcall_detail(session, rollcall_id)
+                            course_id = detail.get('course_id')
+                            rollcall_time = detail.get('rollcall_time')
+                            if course_id and rollcall_time:
+                                # UTC date, not Beijing time — the timetable
+                                # API indexes by UTC, so UTC+8 breaks any
+                                # rollcall between 00:00 and 07:59 CST.
+                                rollcall_date = (
+                                    datetime.fromisoformat(str(rollcall_time).replace('Z', '+00:00'))
+                                    .astimezone(timezone.utc)
+                                    .date().isoformat()
+                                )
+                                code_resp = retry_request(
+                                    lambda: session.get(
+                                        f"{BASE_URL}/api/timetable_rollcalls",
+                                        params={"course_ids": course_id,
+                                                "rollcall_date": rollcall_date},
+                                        headers=HEADERS, timeout=10,
+                                    ),
+                                    max_attempts=2, delay=1, label="timetable_rollcalls",
+                                )
+                                if code_resp.status_code == 200:
+                                    code_data = code_resp.json()
+                                    rollcalls = (code_data.get('rollcalls')
+                                                 if isinstance(code_data, dict) else None)
+                                    if isinstance(rollcalls, list):
+                                        print(f"[diag] timetable_rollcalls body: "
+                                              f"{json.dumps(code_data, ensure_ascii=False)[:800]}")
+                                        for entry in rollcalls:
+                                            if not isinstance(entry, dict):
+                                                continue
+                                            if str(entry.get('id')) != str(rollcall_id):
+                                                continue
+                                            code = entry.get('number_code')
+                                            if code is not None and str(code).strip():
+                                                number_code = str(code)
+                                            break
+                                    else:
+                                        print("[diag] timetable_rollcalls: no 'rollcalls' list "
+                                              f"(keys={sorted(code_data.keys()) if isinstance(code_data, dict) else type(code_data).__name__})")
+
+                            # Answer time still comes from the per-rollcall student list.
+                            student_url = f"{BASE_URL}/api/rollcall/{rollcall_id}/student_rollcalls"
+                            student_resp = retry_request(
+                                lambda: session.get(student_url, headers=HEADERS, timeout=10),
+                                max_attempts=2, delay=1, label="student_rollcalls",
                             )
-                            if code_resp.status_code == 200:
-                                code_data = code_resp.json()
-                                # find_number_code already tolerates non-dicts; .get does not
-                                if not isinstance(code_data, dict):
-                                    raise ValueError(
-                                        f"student_rollcalls payload is not a dict "
-                                        f"({type(code_data).__name__})"
-                                    )
-                                number_code = find_number_code(code_data)
-                                # Find current student's answer time
-                                students = code_data.get('student_rollcalls', [])
+                            if student_resp.status_code == 200:
+                                student_data = student_resp.json()
+                                students = (student_data.get('student_rollcalls', [])
+                                            if isinstance(student_data, dict) else [])
                                 if not isinstance(students, list):
                                     students = []
                                 for sc in students:
@@ -312,9 +351,16 @@ try:
                         )
                         sender = os.path.join(CLI_ROOT, 'scripts', 'send_rollcall_notification.py')
                         payload = json.dumps({"target": notify_target, "message": msg})
+                        # 通知脚本 import dotenv 依赖 hermes venv；systemd 服务用的是
+                        # /usr/bin/python3（无 dotenv），必须显式指定 venv 解释器
+                        notify_python = os.environ.get('XMU_NOTIFY_PYTHON') or str(
+                            Path.home() / '.hermes' / 'hermes-agent' / 'venv' / 'bin' / 'python3'
+                        )
+                        if not os.path.exists(notify_python):
+                            notify_python = sys.executable
                         try:
                             completed = subprocess.run(
-                                [sys.executable, sender, payload],
+                                [notify_python, sender, payload],
                                 capture_output=True, text=True, timeout=30
                             )
                         except subprocess.TimeoutExpired:

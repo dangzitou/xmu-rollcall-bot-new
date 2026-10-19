@@ -280,14 +280,34 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
             elif is_number and not is_radar:
                 wait_before_number_answer(settings)
                 wait_for_classmates(session, rollcall_id, settings)
-                if send_code(session, rollcall_id):
+                # A single attempt used to be final, so one stale detail read or
+                # a transient API hiccup burned the whole rollcall. Retry a few
+                # times with a short gap: the code endpoint occasionally lags
+                # the rollcall by a few seconds.
+                answered = False
+                for attempt in range(1, 4):
+                    if send_code(session, rollcall_id):
+                        answered = True
+                        break
+                    if attempt < 3:
+                        print(f"Number answer attempt {attempt}/3 failed; retrying in 5s...")
+                        time.sleep(5)
+                if answered:
                     answer_status[i] = True
                 else:
                     print("Answering failed.")
             elif is_radar:
                 wait_before_radar_answer(settings)
                 wait_for_classmates(session, rollcall_id, settings)
-                if send_radar(session, rollcall_id):
+                answered = False
+                for attempt in range(1, 3):
+                    if send_radar(session, rollcall_id):
+                        answered = True
+                        break
+                    if attempt < 2:
+                        print(f"Radar answer attempt {attempt}/2 failed; retrying in 3s...")
+                        time.sleep(3)
+                if answered:
                     answer_status[i] = True
                 else:
                     print("Answering failed.")
