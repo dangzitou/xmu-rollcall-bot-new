@@ -9,6 +9,7 @@ appropriate sign-in action.
 from __future__ import annotations
 
 import time
+import math
 import random
 
 import requests
@@ -29,16 +30,17 @@ _SIGNED_FIELDS = (
 _SIGNED_STATUSES = {'on_call_fine'}
 
 
-def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | None:
-    """Query the API for the number of students who have already signed in.
+def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> tuple[int, int] | None:
+    """Query the API for signed/total student counts on a rollcall.
 
     Args:
         session: Authenticated requests session with valid cookies.
         rollcall_id: The rollcall event ID to query.
 
     Returns:
-        The count of students who have answered, or ``None`` if the
-        request fails.
+        ``(signed, total)`` where *signed* counts entries with an
+        ``updated_at`` timestamp and *total* is every roster entry, or
+        ``None`` when the request fails.
     """
     try:
         from .utils import BASE_URL, HEADERS, retry_request
@@ -59,47 +61,57 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> int | No
             students = payload.get("student_rollcalls", [])
             if not isinstance(students, list):
                 return None
-            return sum(1 for s in students if isinstance(s, dict) and s.get("updated_at"))
+            total = sum(1 for s in students if isinstance(s, dict))
+            # The API stamps ``updated_at`` on every roster row the moment the
+            # rollcall is created, so it cannot tell signed from absent. Only
+            # the ``status`` field does: on_call variants mean signed in,
+            # everything else (absent, etc.) means not yet.
+            signed = sum(
+                1 for s in students
+                if isinstance(s, dict) and str(s.get("status", "")).startswith("on_call")
+            )
+            return signed, total
     except Exception:
         pass
     return None
 
 
 def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: dict) -> None:
-    """根据配置等待足够多的同学签到后再签，最多等待120秒。
+    """Wait until a fraction of the roster has signed, then proceed.
+
+    The threshold is a percentage of the class roster rather than a fixed
+    headcount, so it scales across courses of different sizes. A rollcall
+    window can be as short as 60 seconds, so the wait is capped well below
+    that: if the threshold is not met in time we sign anyway, because
+    missing the window entirely is worse than signing early.
 
     Args:
-        session: 已认证的 requests 会话。
-        rollcall_id: 签到事件 ID。
-        settings: 签到设置字典，包含 ``wait_before_answer_mode`` 等字段。
+        session: Authenticated requests session with valid cookies.
+        rollcall_id: The rollcall event ID to query.
+        settings: Settings dict; ``wait_fraction_percent`` sets the
+            threshold (default 5) and ``wait_max_seconds`` the cap
+            (default 30).
     """
-    mode = settings.get("wait_before_answer_mode", "none")
-    if mode == "none":
+    percent = settings.get("wait_fraction_percent", 5) or 0
+    if percent <= 0:
         return
 
-    if mode == "fixed":
-        target = settings.get("wait_before_answer_count_min", 0)
-    elif mode == "random":
-        lo = settings.get("wait_before_answer_count_min", 0)
-        hi = settings.get("wait_before_answer_count_max", 0)
-        target = random.randint(lo, hi) if hi > lo else lo
-    else:
-        return
+    max_wait = settings.get("wait_max_seconds", 30) or 0
+    deadline = time.monotonic() + max_wait
+    print(f"Waiting for {percent}% of the class to sign before answering...")
 
-    if target <= 0:
-        return
-
-    print(f"Waiting for {target} classmate(s) to answer before signing...")
-    deadline = time.monotonic() + WAIT_FOR_CLASSMATES_TIMEOUT
     while time.monotonic() < deadline:
-        count = _fetch_signed_count(session, rollcall_id)
-        if count is not None:
-            print(f"\r  Signed: {count}/{target}", end="", flush=True)
-            if count >= target:
-                print()
-                return
+        counts = _fetch_signed_count(session, rollcall_id)
+        if counts is not None:
+            signed, total = counts
+            if total > 0:
+                target = max(1, math.ceil(total * percent / 100))
+                print(f"\r  Signed: {signed}/{total} (target {target})", end="", flush=True)
+                if signed >= target:
+                    print()
+                    return
         time.sleep(WAIT_POLL_INTERVAL)
-    print(f"\nTimeout after {WAIT_FOR_CLASSMATES_TIMEOUT}s, proceeding anyway.")
+    print(f"\nTimeout after {max_wait}s, proceeding anyway.")
 
 
 def process_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> dict:

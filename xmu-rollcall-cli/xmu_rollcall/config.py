@@ -57,14 +57,20 @@ DEFAULT_ACCOUNT = {
     "username": "",
     "password": "",
     "rollcall_settings": {
-        "number_delay_min": 10,
-        "number_delay_max": 30,
+        "number_delay_min": 0,
+        "number_delay_max": 0,
         "radar_delay_min": 0,
         "radar_delay_max": 0,
         "manual_confirm": False,
         "wait_before_answer_mode": "none",
         "wait_before_answer_count_min": 0,
         "wait_before_answer_count_max": 0,
+        # Sign once this fraction of the roster has answered. A percentage
+        # scales across class sizes, unlike a fixed headcount.
+        "wait_fraction_percent": 5,
+        # Hard cap on that wait. Rollcall windows can be as short as 60s,
+        # so waiting longer risks missing the window entirely.
+        "wait_max_seconds": 30,
     }
 }
 

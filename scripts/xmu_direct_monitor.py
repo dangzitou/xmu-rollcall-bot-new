@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.join(CLI_ROOT, 'xmu-rollcall-cli'))
 LOG_DIR = os.environ.get('XMU_ROLLCALL_LOG_DIR', os.path.join(CLI_ROOT, '.runtime'))
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'xmu-rollcall-monitor.log')
+EVENT_LOG = os.path.join(LOG_DIR, 'xmu-rollcall-events.jsonl')
 RETENTION_DAYS = 7
 
 # Log cleanup: remove lines older than RETENTION_DAYS
@@ -72,6 +73,35 @@ def pe(msg: str, exc: BaseException | None = None) -> None:
         _log_fh.write(tb + '\n')
         sys.stdout.write(tb + '\n')
     sys.stdout.flush()
+
+
+def event(rollcall_id, course, teacher, rtype, **fields) -> None:
+    """Append one structured JSON line to the event log for post-hoc debugging.
+
+    Every rollcall detection writes a line here regardless of outcome, so a
+    failure can be reconstructed from the log alone without re-running.
+
+    Args:
+        rollcall_id: The rollcall event ID.
+        course: Course name.
+        teacher: Teacher name.
+        rtype: Rollcall type ('number', 'radar', 'qrcode').
+        **fields: Arbitrary extra key/value pairs (status, code, elapsed, etc.).
+    """
+    record = {
+        'ts': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'rollcall_id': rollcall_id,
+        'course': course,
+        'teacher': teacher,
+        'type': rtype,
+        **fields,
+    }
+    try:
+        line = json.dumps(record, ensure_ascii=False, default=str) + '\n'
+        with open(EVENT_LOG, 'a') as f:
+            f.write(line)
+    except Exception:
+        pass  # never let logging break the monitor
 
 p("=== XMU Direct Monitor Starting ===")
 
@@ -211,6 +241,16 @@ try:
                 detect_time = time.time()
                 detect_ts = time.strftime('%H:%M:%S', time.localtime(detect_time))
                 p(f"NEW ROLLCALL DETECTED at {detect_ts} ({len(current_rollcalls)} items)")
+                for rc in current_rollcalls:
+                    if isinstance(rc, dict):
+                        event(
+                            rc.get('rollcall_id'),
+                            rc.get('course_title', rc.get('course_name', '?')),
+                            rc.get('created_by_name', '?'),
+                            'radar' if rc.get('is_radar') else ('number' if rc.get('is_number') else 'qrcode'),
+                            stage='detected',
+                            status=rc.get('status'),
+                        )
                 try:
                     from xmu_rollcall.rollcall_handler import process_rollcalls
                     temp_data = process_rollcalls(temp_data, session, acc)
@@ -345,6 +385,15 @@ try:
                         if elapsed_sec is not None and elapsed_sec >= 0:
                             msg += f"\n耗时：{elapsed_sec}s"
 
+                        # Record the full outcome including the code, so a
+                        # failure can be diagnosed from the event log alone.
+                        event(rc.get('rollcall_id'), cname, teacher, rtype,
+                              stage='answered',
+                              number_code=number_code,
+                              status=status,
+                              answer_ts=answer_ts,
+                              elapsed_sec=elapsed_sec)
+
                         notify_target = os.environ.get(
                             'XMU_ROLLCALL_NOTIFY_TARGET',
                             'qqbot:31C7A9C6D26F148A5067E9A93B86EDA9'
@@ -373,14 +422,21 @@ try:
                             )
                         except subprocess.TimeoutExpired:
                             pe(f"QQ notification timed out after 30s for {cname}")
+                            event(rc.get('rollcall_id'), cname, teacher, rtype,
+                                  stage='notify', result='timeout')
                         else:
                             if completed.returncode != 0:
                                 err = (completed.stderr or completed.stdout or "unknown error").strip()
                                 pe(f"QQ notification failed for {cname}: {err}")
+                                event(rc.get('rollcall_id'), cname, teacher, rtype,
+                                      stage='notify', result='failed', error=err[:300])
                             else:
                                 p(f"QQ notification sent for {cname}")
+                                event(rc.get('rollcall_id'), cname, teacher, rtype,
+                                      stage='notify', result='sent')
                 except Exception as e:
                     pe("process_rollcalls or notification error", e)
+                    event(None, '?', '?', '?', stage='error', error=str(e)[:300])
                     
 except KeyboardInterrupt:
     p(f"Shutdown. Queries: {query_count}, Running: {int(time.time()-start_time)}s")
