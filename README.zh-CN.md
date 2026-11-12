@@ -92,7 +92,7 @@ xmu config   # 添加/删除账号，并配置签到安全设置或提醒投递
 xmu switch   # 切换当前账号
 xmu start    # 启动签到监控
 xmu refresh  # 清除当前账号缓存登录信息
-xmu --help   # 查看帮助
+xmu --help   # 查看所有命令及选项
 ```
 
 ---
