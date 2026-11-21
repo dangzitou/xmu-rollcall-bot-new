@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+Entries are grouped by release and use the standard Added, Changed, Deprecated,
+Removed, Fixed, and Security categories when applicable.
+
 ## [Unreleased]
 
 ### Fixed
