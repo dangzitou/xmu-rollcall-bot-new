@@ -31,6 +31,7 @@ Removed, Fixed, and Security categories when applicable.
 - CLI rollcall/notification config prompts use ``.get`` defaults so partial configs cannot KeyError mid-prompt
 
 ### Changed
+- Keep maintenance notes grouped by release section so new entries remain easy to scan
 - Expand docstrings on notification helper load/normalize/main entrypoints
 - Annotate notification helper ``_temporary_env`` return type; document proxy Session patch
 - Ongoing code quality improvements (type hints, docstrings, PEP8 spacing)
