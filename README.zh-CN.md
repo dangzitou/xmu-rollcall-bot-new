@@ -27,7 +27,7 @@
 ### 仓库根目录方式
 
 ```bash
-git clone https://github.com/dangzitou/xmu-rollcall-bot.git
+git clone https://github.com/dangzitou/xmu-rollcall-bot-new.git
 cd xmu-rollcall-bot
 python -m pip install -e ./xmu-rollcall-cli
 ```
