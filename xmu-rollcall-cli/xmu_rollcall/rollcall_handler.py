@@ -76,14 +76,12 @@ def _fetch_signed_count(session: requests.Session, rollcall_id: int) -> tuple[in
     return None
 
 
-def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: dict) -> None:
-    """Wait until a fraction of the roster has signed, then proceed.
+def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: dict) -> bool:
+    """Wait until the configured fraction of the roster has signed.
 
     The threshold is a percentage of the class roster rather than a fixed
-    headcount, so it scales across courses of different sizes. A rollcall
-    window can be as short as 60 seconds, so the wait is capped well below
-    that: if the threshold is not met in time we sign anyway, because
-    missing the window entirely is worse than signing early.
+    headcount, so it scales across courses of different sizes. If the threshold
+    is not met before the timeout, automatic sign-in must not proceed.
 
     Args:
         session: Authenticated requests session with valid cookies.
@@ -94,7 +92,8 @@ def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: d
     """
     percent = settings.get("wait_fraction_percent", 5) or 0
     if percent <= 0:
-        return
+        print("Classmate threshold is disabled; skipping automatic sign-in.")
+        return False
 
     max_wait = settings.get("wait_max_seconds", 30) or 0
     deadline = time.monotonic() + max_wait
@@ -109,9 +108,10 @@ def wait_for_classmates(session: requests.Session, rollcall_id: int, settings: d
                 print(f"\r  Signed: {signed}/{total} (target {target})", end="", flush=True)
                 if signed >= target:
                     print()
-                    return
+                    return True
         time.sleep(WAIT_POLL_INTERVAL)
-    print(f"\nTimeout after {max_wait}s, proceeding anyway.")
+    print(f"\nTimeout after {max_wait}s; threshold not met, skipping automatic sign-in.")
+    return False
 
 
 def process_rollcalls(data: dict, session: requests.Session, account: dict | None = None) -> dict:
@@ -291,7 +291,9 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
                 print("Skipping auto-answer: missing rollcall_id on payload.")
             elif is_number and not is_radar:
                 wait_before_number_answer(settings)
-                wait_for_classmates(session, rollcall_id, settings)
+                if not wait_for_classmates(session, int(rollcall_id), settings):
+                    print("Classmate threshold not met; number rollcall was not answered.")
+                    continue
                 # A single attempt used to be final, so one stale detail read or
                 # a transient API hiccup burned the whole rollcall. Retry a few
                 # times with a short gap: the code endpoint occasionally lags
@@ -310,7 +312,9 @@ def handle_rollcalls(data: dict, session: requests.Session, account: dict | None
                     print("Answering failed.")
             elif is_radar:
                 wait_before_radar_answer(settings)
-                wait_for_classmates(session, rollcall_id, settings)
+                if not wait_for_classmates(session, int(rollcall_id), settings):
+                    print("Classmate threshold not met; radar rollcall was not answered.")
+                    continue
                 answered = False
                 for attempt in range(1, 3):
                     if send_radar(session, rollcall_id):
